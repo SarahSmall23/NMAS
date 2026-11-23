@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Start Consultation - NMAS</title>
+
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+
+    <style>
+        *{
+            margin:0;
+            padding:0;
+            box-sizing:border-box;
+            font-family:Arial, sans-serif;
+        }
+
+        body{
+            background:#F0FAF5;
+            padding:40px;
+            color:#1A2E1A;
+        }
+
+        .container{
+            max-width:1100px;
+            margin:auto;
+        }
+
+        .header{
+            margin-bottom:30px;
+        }
+
+        .header h1{
+            color:#1C2B2B;
+            font-size:34px;
+            margin-bottom:10px;
+        }
+
+        .header p{
+            color:#64748b;
+        }
+
+        .card{
+            background:white;
+            border-radius:18px;
+            padding:25px;
+            box-shadow:0 8px 25px rgba(0,0,0,0.06);
+            margin-bottom:25px;
+        }
+
+        .card h2{
+            color:#1C2B2B;
+            margin-bottom:20px;
+        }
+
+        .details-grid{
+            display:grid;
+            grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+            gap:15px;
+        }
+
+        .detail{
+            background:#f8fafc;
+            padding:15px;
+            border-radius:12px;
+        }
+
+        .detail strong{
+            color:#1C2B2B;
+            display:block;
+            margin-bottom:5px;
+        }
+
+        label{
+            display:block;
+            font-weight:600;
+            color:#1C2B2B;
+            margin-bottom:8px;
+        }
+
+        textarea{
+            width:100%;
+            min-height:110px;
+            padding:14px;
+            border:1px solid #cbd5e1;
+            border-radius:10px;
+            margin-bottom:18px;
+            resize:vertical;
+            font-size:14px;
+        }
+
+        .btn-row{
+            display:flex;
+            gap:12px;
+            flex-wrap:wrap;
+        }
+
+        .btn{
+            display:inline-flex;
+            align-items:center;
+            gap:8px;
+            text-decoration:none;
+            border:none;
+            background:#059669;
+            color:white;
+            padding:12px 18px;
+            border-radius:10px;
+            font-size:14px;
+            font-weight:600;
+            cursor:pointer;
+        }
+
+        .btn:hover{
+            background:#1C2B2B;
+        }
+
+        .btn-secondary{
+            background:#64748b;
+        }
+
+        .btn-secondary:hover{
+            background:#475569;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="header">
+        <h1>
+            <i class="ti ti-stethoscope"></i>
+            Start Consultation
+        </h1>
+
+        <p>
+            Capture symptoms, diagnosis, and treatment notes for this appointment.
+        </p>
+    </div>
+
+    <!-- NURSE VITALS (reference while consulting) -->
+    <div class="card" style="border-left:6px solid #2563eb;">
+        <h2><i class="ti ti-heart-rate-monitor"></i> Vitals recorded by the nurse</h2>
+        <p th:if="${vitals == null}" style="color:#64748b;">No vitals were recorded for this visit.</p>
+        <div th:if="${vitals != null}">
+            <p style="color:#64748b;font-size:13px;margin-bottom:14px;"
+               th:text="'Recorded by ' + ${vitals.vitalsRecordedBy != null ? vitals.vitalsRecordedBy : 'nurse'} + ' at ' + ${#temporals.format(vitals.vitalsRecordedAt, 'HH:mm, dd MMM yyyy')}">Recorded by</p>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;">
+                <div style="background:#F8FAFC;border-radius:12px;padding:12px;"
+                     th:style="${vitals.bpSystolic != null and (vitals.bpSystolic ge 140 or vitals.bpSystolic lt 90 or (vitals.bpDiastolic != null and vitals.bpDiastolic ge 90))} ? 'background:#FEF2F2;border-radius:12px;padding:12px;border:1px solid #FCA5A5;' : 'background:#F8FAFC;border-radius:12px;padding:12px;'">
+                    <small style="color:#64748b;">Blood pressure</small><br>
+                    <strong th:text="${vitals.bpSystolic != null ? vitals.bpSystolic + '/' + vitals.bpDiastolic + ' mmHg' : '-'}">-</strong></div>
+                <div style="border-radius:12px;padding:12px;"
+                     th:style="${vitals.heartRate != null and (vitals.heartRate gt 100 or vitals.heartRate lt 60)} ? 'background:#FEF2F2;border-radius:12px;padding:12px;border:1px solid #FCA5A5;' : 'background:#F8FAFC;border-radius:12px;padding:12px;'">
+                    <small style="color:#64748b;">Heart rate</small><br>
+                    <strong th:text="${vitals.heartRate != null ? vitals.heartRate + ' bpm' : '-'}">-</strong></div>
+                <div style="border-radius:12px;padding:12px;"
+                     th:style="${vitals.temperature != null and (vitals.temperature ge 37.8 or vitals.temperature lt 35.5)} ? 'background:#FEF2F2;border-radius:12px;padding:12px;border:1px solid #FCA5A5;' : 'background:#F8FAFC;border-radius:12px;padding:12px;'">
+                    <small style="color:#64748b;">Temperature</small><br>
+                    <strong th:text="${vitals.temperature != null ? vitals.temperature + ' °C' : '-'}">-</strong></div>
+                <div style="border-radius:12px;padding:12px;"
+                     th:style="${vitals.oxygenSaturation != null and vitals.oxygenSaturation lt 95} ? 'background:#FEF2F2;border-radius:12px;padding:12px;border:1px solid #FCA5A5;' : 'background:#F8FAFC;border-radius:12px;padding:12px;'">
+                    <small style="color:#64748b;">Oxygen saturation</small><br>
+                    <strong th:text="${vitals.oxygenSaturation != null ? vitals.oxygenSaturation + ' %' : '-'}">-</strong></div>
+                <div style="border-radius:12px;padding:12px;"
+                     th:style="${vitals.bloodGlucose != null and (vitals.bloodGlucose gt 11.0 or vitals.bloodGlucose lt 4.0)} ? 'background:#FEF2F2;border-radius:12px;padding:12px;border:1px solid #FCA5A5;' : 'background:#F8FAFC;border-radius:12px;padding:12px;'">
+                    <small style="color:#64748b;">Blood glucose</small><br>
+                    <strong th:text="${vitals.bloodGlucose != null ? vitals.bloodGlucose + ' mmol/L' : '-'}">-</strong></div>
+                <div style="background:#F8FAFC;border-radius:12px;padding:12px;">
+                    <small style="color:#64748b;">Weight / Height</small><br>
+                    <strong th:text="${(vitals.weightKg != null ? vitals.weightKg + ' kg' : '-') + ' / ' + (vitals.heightCm != null ? vitals.heightCm + ' cm' : '-')}">-</strong></div>
+                <div style="background:#F8FAFC;border-radius:12px;padding:12px;">
+                    <small style="color:#64748b;">BMI</small><br>
+                    <strong th:text="${vitals.bmi != null ? #numbers.formatDecimal(vitals.bmi, 1, 1) : '-'}">-</strong></div>
+                <div th:if="${vitals.hivStatus != null and !vitals.hivStatus.isBlank()}" style="background:#F8FAFC;border-radius:12px;padding:12px;">
+                    <small style="color:#64748b;">HIV status</small><br>
+                    <strong th:text="${vitals.hivStatus}">-</strong></div>
+            </div>
+            <p th:if="${vitals.nurseNotes != null and !vitals.nurseNotes.isBlank()}" style="margin-top:14px;font-size:14px;">
+                <strong>Nurse notes:</strong> <span th:text="${vitals.nurseNotes}"></span></p>
+            <p style="margin-top:10px;font-size:12px;color:#64748b;">Values outside the usual range are highlighted in red. Compare them with what the patient reports.</p>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Patient & Appointment Details</h2>
+
+        <div class="details-grid">
+
+            <div class="detail">
+                <strong>Patient Name</strong>
+                <span th:text="${patient != null ? patient.fullName : 'Not assigned'}">Patient Name</span>
+            </div>
+
+            <div class="detail">
+                <strong>Patient ID Number</strong>
+                <span th:text="${patient != null ? patient.idNumber : 'N/A'}">ID Number</span>
+            </div>
+
+            <div class="detail">
+                <strong>Appointment Date</strong>
+                <span th:text="${appointment.appointmentDate}">Date</span>
+            </div>
+
+            <div class="detail">
+                <strong>Appointment Time</strong>
+                <span th:text="${appointment.appointmentTime}">Time</span>
+            </div>
+
+            <div class="detail">
+                <strong>Reason</strong>
+                <span th:text="${appointment.reason}">Reason</span>
+            </div>
+
+            <div class="detail">
+                <strong>Status</strong>
+                <span th:text="${appointment.status}">Status</span>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Consultation Notes (SOAP)</h2>
+
+        <form th:action="@{/consultations/save}" method="post">
+
+            <input type="hidden" name="appointmentId" th:value="${appointment.id}">
+
+            <label>S — Symptoms <span style="font-weight:400;color:#64748b;">(what the patient tells you)</span></label>
+            <textarea name="symptoms" placeholder="Enter what the patient reports experiencing..." required></textarea>
+
+            <label>O — Observation <span style="font-weight:400;color:#64748b;">(what you observe/see)</span></label>
+            <textarea name="observation" placeholder="Enter your clinical observations of the patient..." required></textarea>
+
+            <label>A — Assessment <span style="font-weight:400;color:#64748b;">(your clinical assessment / what the patient should do)</span></label>
+            <textarea name="assessment" placeholder="Enter your assessment and any recommended precautions or restrictions..." required></textarea>
+
+            <div class="info-note" style="background:#f0fdfa;border:1px solid #99f6e4;color:#0f766e;padding:14px;border-radius:10px;margin-bottom:18px;font-size:13px;">
+                <i class="ti ti-info-circle"></i>
+                Prescription (P) is not written here — once this consultation is saved, go to
+                <strong>Consultations</strong> and write the prescription from there.
+            </div>
+
+            <div class="btn-row">
+
+                <button type="submit" class="btn">
+                    <i class="ti ti-device-floppy"></i>
+                    Save Consultation
+                </button>
+
+                <a th:href="@{/appointments}" class="btn btn-secondary">
+                    <i class="ti ti-arrow-left"></i>
+                    Back to Appointments
+                </a>
+
+            </div>
+
+        </form>
+    </div>
+
+</div>
+
+</body>
+</html>

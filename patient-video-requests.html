@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Video Consultations - NMAS</title>
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+    <style>
+        *{ margin:0; padding:0; box-sizing:border-box; font-family:Arial,sans-serif; }
+        body{ background:#F0FAF5; color:#1A2E1A; padding:35px; }
+        .topbar{ display:flex; justify-content:space-between; align-items:center; margin-bottom:30px; flex-wrap:wrap; gap:15px; }
+        .topbar h2{ font-size:28px; color:#1C2B2B; }
+        .topbar p{ color:#64748b; margin-top:5px; }
+        .grid{ display:grid; grid-template-columns:1fr 1.5fr; gap:30px; align-items:start; }
+        .card{ background:white; padding:28px; border-radius:18px; box-shadow:0 8px 25px rgba(0,0,0,0.06); }
+        .card h3{ font-size:18px; color:#1C2B2B; margin-bottom:20px; }
+        .form-group{ margin-bottom:16px; }
+        label{ display:block; font-size:13px; font-weight:600; margin-bottom:5px; }
+        select, textarea{ width:100%; padding:11px 14px; border:1px solid #d1fae5; border-radius:10px; font-size:13px; outline:none; }
+        select:focus, textarea:focus{ border-color:#059669; }
+        textarea{ resize:vertical; min-height:70px; }
+        .btn{ display:inline-flex; align-items:center; gap:8px; text-decoration:none; background:#059669; color:white; padding:11px 16px; border-radius:10px; font-size:13px; font-weight:600; border:none; cursor:pointer; transition:0.2s; }
+        .btn:hover{ background:#047857; }
+        .btn-sec{ background:#1C2B2B; }
+        .btn-sec:hover{ background:#334155; }
+        .btn-danger{ background:#dc2626; }
+        .btn-danger:hover{ background:#b91c1c; }
+        .btn-sm{ padding:6px 12px; font-size:12px; }
+        .back{ margin-bottom:25px; }
+        table{ width:100%; border-collapse:collapse; font-size:13px; }
+        th{ background:#1C2B2B; color:white; padding:12px 14px; text-align:left; font-size:12px; text-transform:uppercase; }
+        td{ padding:12px 14px; border-bottom:1px solid #f1f5f9; vertical-align:middle; }
+        tr:hover td{ background:#f8fff9; }
+        .badge{ display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; }
+        .badge-requested{ background:#fef9c3; color:#854d0e; }
+        .badge-accepted{ background:#d1fae5; color:#065f46; }
+        .badge-ended{ background:#e0e7ff; color:#3730a3; }
+        .badge-cancelled{ background:#fee2e2; color:#991b1b; }
+        .empty{ text-align:center; padding:40px; color:#94a3b8; }
+    </style>
+</head>
+<body>
+<div class="back">
+    <a th:href="@{/patient-dashboard}" class="btn btn-sec">
+        <i class="ti ti-arrow-left"></i> Back to Dashboard
+    </a>
+</div>
+
+<div class="topbar">
+    <div>
+        <h2>Video Consultations</h2>
+        <p>Request and manage your video consultation sessions</p>
+    </div>
+</div>
+
+<div class="grid">
+    <div class="card">
+        <h3><i class="ti ti-video" style="color:#059669;"></i> Request Video Call</h3>
+        <div th:if="${errorMessage}" style="background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;padding:12px 14px;border-radius:10px;margin-bottom:14px;font-size:13px;" th:text="${errorMessage}"></div>
+        <form th:action="@{/video/request}" method="post">
+            <div class="form-group">
+                <label>Facility</label>
+                <select id="vidFacilityFilter" onchange="nmasFilterVideoDoctors()">
+                    <option value="">All facilities</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Specialty</label>
+                <select id="vidSpecialtyFilter" onchange="nmasFilterVideoDoctors()">
+                    <option value="">All specialties</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Doctor</label>
+                <select name="doctorId" id="vidDoctorSelect" required>
+                    <option value="">-- Select Doctor --</option>
+                    <option th:each="d : ${doctors}" th:value="${d.id}"
+                            th:attr="data-facility=${d.facility != null ? d.facility.facilityName : ''},data-spec=${d.specialization}"
+                            th:text="${d.fullName + ' — ' + d.specialization + (d.facility != null ? ' (' + d.facility.facilityName + ')' : '') + (onShift != null and onShift[d.id] == true ? '  [available now]' : '')}"></option>
+                </select>
+                <div id="vidSchedule" style="margin-top:8px;font-size:12px;color:#334155;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:8px 10px;display:none;"></div>
+                <div id="vidNoDoctors" style="display:none;color:#b45309;font-size:12px;margin-top:6px;">No doctors match this facility/specialty.</div>
+            </div>
+            <div class="form-group">
+                <label>Link to Appointment (optional)</label>
+                <select name="appointmentId">
+                    <option value="">-- None --</option>
+                    <option th:each="a : ${appointments}"
+                            th:value="${a.id}"
+                            th:text="${a.appointmentDate + ' — ' + a.status}"></option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Notes</label>
+                <textarea name="notes" placeholder="Briefly describe your concern..."></textarea>
+            </div>
+            <button type="submit" class="btn"><i class="ti ti-send"></i> Request Call</button>
+        </form>
+    </div>
+
+    <div class="card">
+        <h3><i class="ti ti-history" style="color:#059669;"></i> My Requests</h3>
+        <div th:if="${#lists.isEmpty(requests)}" class="empty">No video consultation requests yet.</div>
+        <table th:if="${!#lists.isEmpty(requests)}">
+            <thead>
+                <tr>
+                    <th>Doctor</th>
+                    <th>Status</th>
+                    <th>Requested</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="req : ${requests}">
+                    <td th:text="${req.doctor?.fullName}"></td>
+                    <td>
+                        <span th:class="'badge badge-' + ${req.status.toLowerCase()}" th:text="${req.status}"></span>
+                    </td>
+                    <td th:text="${req.requestedAt}"></td>
+                    <td>
+                        <a th:if="${req.status == 'ACCEPTED'}"
+                           th:href="@{/video/room/{roomId}(roomId=${req.roomId})}"
+                           class="btn btn-sm">
+                            <i class="ti ti-video"></i> Join
+                        </a>
+                        <a th:if="${req.status == 'REQUESTED'}"
+                           th:href="@{/video/cancel/{id}(id=${req.id})}"
+                           class="btn btn-danger btn-sm">
+                            <i class="ti ti-x"></i> Cancel
+                        </a>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+<script>
+(function () {
+    var sel = document.getElementById('vidDoctorSelect');
+    var fac = document.getElementById('vidFacilityFilter');
+    var spec = document.getElementById('vidSpecialtyFilter');
+    var facs = {}, specs = {};
+    Array.from(sel.options).forEach(function (o) {
+        if (!o.value) return;
+        var f = o.getAttribute('data-facility'), sp = o.getAttribute('data-spec');
+        if (f) facs[f] = 1; if (sp) specs[sp] = 1;
+    });
+    Object.keys(facs).sort().forEach(function (f) { var o = document.createElement('option'); o.value = f; o.textContent = f; fac.appendChild(o); });
+    Object.keys(specs).sort().forEach(function (f) { var o = document.createElement('option'); o.value = f; o.textContent = f; spec.appendChild(o); });
+})();
+function nmasFilterVideoDoctors() {
+    var sel = document.getElementById('vidDoctorSelect');
+    var f = document.getElementById('vidFacilityFilter').value;
+    var sp = document.getElementById('vidSpecialtyFilter').value;
+    var visible = 0;
+    Array.from(sel.options).forEach(function (o) {
+        if (!o.value) return;
+        var ok = (!f || o.getAttribute('data-facility') === f) && (!sp || o.getAttribute('data-spec') === sp);
+        o.hidden = !ok; o.disabled = !ok;
+        if (ok) visible++;
+    });
+    var cur = sel.options[sel.selectedIndex];
+    if (cur && cur.value && cur.hidden) sel.selectedIndex = 0;
+    document.getElementById('vidNoDoctors').style.display = visible === 0 ? 'block' : 'none';
+}
+</script>
+<script>
+(function(){
+  var sel=document.getElementById('vidDoctorSelect'), box=document.getElementById('vidSchedule');
+  if(!sel||!box) return;
+  sel.addEventListener('change', function(){
+    if(!sel.value){ box.style.display='none'; return; }
+    fetch('/availability/api/schedule?doctorId='+encodeURIComponent(sel.value),{credentials:'same-origin'})
+      .then(function(r){return r.json();}).then(function(s){
+        var html='<strong>Video-call schedule</strong><br>';
+        if(s.upcoming && s.upcoming.length){
+          html+=s.upcoming.map(function(d){return d.dayName+' '+d.date+': '+d.startTime+' - '+d.endTime;}).join('<br>');
+          html+='<br><em>Requests are only accepted while the doctor is on shift.</em>';
+        } else { html+='This doctor has not published a schedule yet - video requests cannot be sent until they do.'; }
+        box.innerHTML=html; box.style.display='block';
+      }).catch(function(){ box.style.display='none'; });
+  });
+})();
+</script>
+</body>
+</html>

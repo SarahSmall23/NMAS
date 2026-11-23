@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Set Availability - NMAS</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+    <style>
+        *{ margin:0; padding:0; box-sizing:border-box; font-family:Arial,sans-serif; }
+        body{ background:#F0FAF5; padding:40px; color:#1A2E1A; }
+        .container{ max-width:700px; margin:auto; }
+        .top-actions{ margin-bottom:20px; display:flex; gap:12px; flex-wrap:wrap; }
+        .nav-btn{ display:inline-flex; align-items:center; gap:8px; text-decoration:none; background:#059669; color:white; padding:12px 18px; border-radius:10px; font-size:14px; font-weight:600; transition:0.2s; }
+        .nav-btn:hover{ background:#1C2B2B; }
+        .nav-btn.secondary{ background:#e2e8f0; color:#1A2E1A; }
+        .nav-btn.secondary:hover{ background:#cbd5e1; }
+        .header{ margin-bottom:30px; }
+        .header h1{ color:#1C2B2B; font-size:32px; margin-bottom:8px; }
+        .header p{ color:#64748b; }
+        .card{ background:white; border-radius:18px; padding:35px; box-shadow:0 8px 30px rgba(0,0,0,0.08); }
+        .info-box{ background:#ECFDF5; border:1px solid #6EE7B7; color:#065F46; padding:16px; border-radius:12px; margin-bottom:25px; line-height:1.7; }
+        .error-box{ background:#fee2e2; border:1px solid #fecaca; color:#991b1b; padding:14px; border-radius:10px; margin-bottom:20px; }
+        .field{ margin-bottom:20px; }
+        .field label{ display:block; margin-bottom:8px; font-size:14px; font-weight:600; color:#334155; }
+        .field input, .field select{ width:100%; padding:12px; border:1px solid #cbd5e1; border-radius:10px; font-size:14px; background:#fff; }
+        .field input:focus, .field select:focus{ border-color:#059669; outline:none; box-shadow:0 0 0 3px rgba(5,150,105,0.1); }
+        .readonly-note{ padding:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; font-size:14px; color:#64748b; }
+        .btn-area{ margin-top:30px; display:flex; gap:12px; flex-wrap:wrap; }
+        .btn{ padding:13px 22px; border:none; border-radius:10px; cursor:pointer; font-size:14px; font-weight:600; display:inline-flex; align-items:center; gap:8px; transition:0.2s; text-decoration:none; }
+        .btn-primary{ background:#059669; color:white; }
+        .btn-primary:hover{ background:#1C2B2B; }
+        .btn-secondary{ background:#e2e8f0; color:#1A2E1A; }
+        .btn-secondary:hover{ background:#cbd5e1; }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <div class="top-actions">
+        <a th:href="@{/availability}" class="nav-btn secondary">
+            <i class="ti ti-arrow-left"></i> Back to Availability
+        </a>
+        <a th:href="@{/doctor-dashboard}" class="nav-btn secondary">
+            <i class="ti ti-layout-dashboard"></i> Dashboard
+        </a>
+    </div>
+
+    <div class="header">
+        <h1><i class="ti ti-clock"></i> Set Availability</h1>
+        <p>Define your working shift for a specific date. The system will automatically generate 30-minute appointment slots.</p>
+    </div>
+
+    <div class="card">
+
+        <div class="info-box">
+            <strong>How it works:</strong>
+            Enter your shift start and end times. The system will create one 30-minute slot for every 30 minutes within that shift.
+            For example, a shift from 08:00 to 12:00 generates 8 slots.
+        </div>
+
+        <div th:if="${errorMessage}" class="error-box">
+            <i class="ti ti-alert-circle"></i>
+            <span th:text="${errorMessage}"></span>
+        </div>
+
+        <form th:action="@{/availability/save}" method="post">
+
+            <div class="field">
+                <label>Date</label>
+                <input type="date" name="availableDate"
+                       th:min="${#temporals.format(#temporals.createNow(), 'yyyy-MM-dd')}" required>
+            </div>
+
+            <div class="field">
+                <label>Shift Start Time</label>
+                <input type="time" name="shiftStartTime" required>
+            </div>
+
+            <div class="field">
+                <label>Shift End Time</label>
+                <input type="time" name="shiftEndTime" required>
+            </div>
+
+            <div class="field">
+                <label>Slot Duration</label>
+                <div class="readonly-note">
+                    <i class="ti ti-info-circle"></i>
+                    Fixed at 30 minutes per slot
+                </div>
+            </div>
+
+            <div class="btn-area">
+                <button type="submit" class="btn btn-primary">
+                    <i class="ti ti-device-floppy"></i> Generate Slots
+                </button>
+                <a th:href="@{/availability}" class="btn btn-secondary">
+                    <i class="ti ti-x"></i> Cancel
+                </a>
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+</body>
+</html>

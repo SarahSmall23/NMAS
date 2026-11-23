@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>NMAS - National Medical Access System</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+    <style>
+        :root{
+            --ink:#0f1f1c; --ink2:#46605a; --mint:#ecf8f3; --teal:#0f766e; --green:#059669; --deep:#0b1f1c;
+            --line:#d7e8e1; --amber:#d97706; --white:#fff;
+        }
+        *{ margin:0; padding:0; box-sizing:border-box; }
+        html{ scroll-behavior:smooth; }
+        body{ font-family:"Segoe UI",system-ui,-apple-system,Arial,sans-serif; color:var(--ink); background:var(--white); line-height:1.6; }
+        a{ color:inherit; }
+        .wrap{ max-width:1160px; margin:0 auto; padding:0 24px; }
+
+        /* top bar */
+        .nav{ position:sticky; top:0; z-index:20; background:rgba(11,31,28,.96); backdrop-filter:blur(8px); }
+        .nav .wrap{ display:flex; align-items:center; justify-content:space-between; height:68px; }
+        .brand{ display:flex; align-items:center; gap:10px; color:#fff; text-decoration:none; font-weight:800; font-size:22px; letter-spacing:.5px; }
+        .brand i{ color:#34d399; font-size:28px; }
+        .nav-links{ display:flex; gap:26px; align-items:center; }
+        .nav-links a{ color:#cfe6de; text-decoration:none; font-size:14.5px; }
+        .nav-links a:hover{ color:#fff; }
+        .btn{ display:inline-flex; align-items:center; gap:8px; padding:12px 24px; border-radius:12px; font-weight:700; font-size:15px; text-decoration:none; border:2px solid transparent; transition:.2s; }
+        .btn-primary{ background:var(--green); color:#fff; }
+        .btn-primary:hover{ background:#047857; }
+        .btn-ghost{ border-color:rgba(255,255,255,.35); color:#fff; }
+        .btn-ghost:hover{ background:rgba(255,255,255,.1); }
+        .nav .btn{ padding:9px 20px; font-size:14px; }
+
+        /* hero */
+        .hero{ background:radial-gradient(900px 480px at 85% 10%,rgba(52,211,153,.22),transparent 60%),linear-gradient(160deg,#0b1f1c 0%,#0f3d36 100%); color:#fff; padding:88px 0 96px; }
+        .hero .wrap{ display:grid; grid-template-columns:1.15fr .85fr; gap:48px; align-items:center; }
+        .tag{ display:inline-flex; gap:8px; align-items:center; background:rgba(52,211,153,.14); border:1px solid rgba(52,211,153,.4); color:#a7f3d0; padding:6px 14px; border-radius:999px; font-size:13px; font-weight:600; margin-bottom:20px; }
+        .hero h1{ font-size:clamp(34px,5vw,56px); line-height:1.08; letter-spacing:-.5px; margin-bottom:18px; }
+        .hero h1 span{ color:#34d399; }
+        .hero p.lead{ font-size:18.5px; color:#c5ddd5; max-width:560px; margin-bottom:32px; }
+        .hero-actions{ display:flex; gap:14px; flex-wrap:wrap; }
+        .hero-card{ background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.14); border-radius:22px; padding:26px; }
+        .hero-card h3{ font-size:14px; text-transform:uppercase; letter-spacing:1.2px; color:#a7f3d0; margin-bottom:16px; }
+        .flow{ list-style:none; display:grid; gap:12px; }
+        .flow li{ display:flex; gap:14px; align-items:center; background:rgba(255,255,255,.07); border-radius:14px; padding:12px 14px; }
+        .flow .n{ width:34px; height:34px; border-radius:50%; background:#34d399; color:#06352b; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+        .flow b{ display:block; font-size:15px; }
+        .flow small{ color:#b4d3c8; font-size:12.5px; }
+
+        /* stats */
+        .stats{ background:var(--mint); border-bottom:1px solid var(--line); }
+        .stats .wrap{ display:grid; grid-template-columns:repeat(4,1fr); }
+        .stat{ padding:30px 10px; text-align:center; }
+        .stat b{ display:block; font-size:34px; color:var(--teal); line-height:1.1; }
+        .stat span{ color:var(--ink2); font-size:14px; }
+
+        section{ padding:84px 0; }
+        .eyebrow{ color:var(--green); font-weight:800; letter-spacing:1.4px; font-size:12.5px; text-transform:uppercase; margin-bottom:10px; }
+        h2.title{ font-size:clamp(26px,3.4vw,38px); line-height:1.15; margin-bottom:14px; letter-spacing:-.3px; }
+        .sub{ color:var(--ink2); max-width:660px; font-size:17px; margin-bottom:44px; }
+
+        .grid3{ display:grid; grid-template-columns:repeat(3,1fr); gap:22px; }
+        .card{ border:1px solid var(--line); border-radius:18px; padding:26px; background:#fff; transition:.2s; }
+        .card:hover{ transform:translateY(-4px); box-shadow:0 14px 34px rgba(15,118,110,.12); }
+        .ico{ width:50px; height:50px; border-radius:14px; background:var(--mint); color:var(--teal); display:flex; align-items:center; justify-content:center; font-size:26px; margin-bottom:16px; }
+        .card h3{ font-size:18px; margin-bottom:8px; }
+        .card p{ color:var(--ink2); font-size:14.5px; }
+
+        .alt{ background:#f6fbf9; border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
+        .roles{ display:grid; grid-template-columns:repeat(4,1fr); gap:18px; }
+        .role{ background:#fff; border:1px solid var(--line); border-radius:16px; padding:22px; }
+        .role i{ font-size:28px; color:var(--teal); }
+        .role h4{ margin:10px 0 6px; font-size:16px; }
+        .role p{ font-size:13.5px; color:var(--ink2); }
+
+        .split{ display:grid; grid-template-columns:1fr 1fr; gap:48px; align-items:center; }
+        .checks{ list-style:none; display:grid; gap:12px; margin-top:18px; }
+        .checks li{ display:flex; gap:12px; align-items:flex-start; color:var(--ink2); }
+        .checks i{ color:var(--green); font-size:20px; margin-top:2px; }
+        .panel{ background:linear-gradient(160deg,#0b1f1c,#0f3d36); color:#fff; border-radius:24px; padding:30px; }
+        .bubble{ background:rgba(255,255,255,.1); border-radius:16px 16px 16px 4px; padding:12px 16px; margin-bottom:12px; font-size:14.5px; max-width:88%; }
+        .bubble.me{ background:#34d399; color:#06352b; border-radius:16px 16px 4px 16px; margin-left:auto; }
+        .risk{ margin-top:18px; border-top:1px solid rgba(255,255,255,.15); padding-top:16px; font-size:13.5px; }
+        .bar{ height:8px; border-radius:6px; background:rgba(255,255,255,.15); margin:6px 0 12px; overflow:hidden; }
+        .bar i{ display:block; height:100%; background:#34d399; }
+
+        .chips{ display:flex; flex-wrap:wrap; gap:10px; }
+        .chip{ border:1px solid var(--line); background:#fff; border-radius:999px; padding:8px 16px; font-size:13.5px; color:var(--ink2); }
+        .chip i{ color:var(--green); margin-right:4px; }
+
+        .emergency{ background:#fff7ed; border:1px solid #fed7aa; border-radius:18px; padding:22px 26px; display:flex; gap:18px; align-items:center; flex-wrap:wrap; }
+        .emergency i{ font-size:34px; color:var(--amber); }
+        .emergency b{ font-size:17px; }
+        .cta{ background:linear-gradient(160deg,#0b1f1c,#0f3d36); color:#fff; text-align:center; }
+        .cta p{ color:#c5ddd5; max-width:560px; margin:0 auto 28px; font-size:17px; }
+        footer{ background:#071512; color:#8fb0a6; padding:30px 0; font-size:13.5px; }
+        footer .wrap{ display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+
+        @media (max-width:900px){
+            .hero .wrap, .split{ grid-template-columns:1fr; }
+            .grid3{ grid-template-columns:1fr; }
+            .roles{ grid-template-columns:1fr 1fr; }
+            .stats .wrap{ grid-template-columns:1fr 1fr; }
+            .nav-links a:not(.btn){ display:none; }
+            section{ padding:60px 0; }
+        }
+        @media (max-width:520px){ .roles{ grid-template-columns:1fr; } }
+    </style>
+</head>
+<body>
+
+<header class="nav">
+    <div class="wrap">
+        <a class="brand" href="#top"><i class="ti ti-heart-rate-monitor"></i> NMAS</a>
+        <nav class="nav-links">
+            <a href="#how">How it works</a>
+            <a href="#features">Features</a>
+            <a href="#who">Who it's for</a>
+            <a href="#aiden">AIDEN</a>
+            <a href="#facilities">Facilities</a>
+            <a class="btn btn-primary" th:if="${!loggedIn}" th:href="@{/login}"><i class="ti ti-login"></i> Log in</a>
+            <a class="btn btn-primary" th:if="${loggedIn}" th:href="@{/redirect-dashboard}"><i class="ti ti-layout-dashboard"></i> My dashboard</a>
+        </nav>
+    </div>
+</header>
+
+<main id="top">
+    <section class="hero">
+        <div class="wrap">
+            <div>
+                <div class="tag"><i class="ti ti-shield-check"></i> One record. Every facility. Always secure.</div>
+                <h1>Your health record, <span>wherever you are treated.</span></h1>
+                <p class="lead">The National Medical Access System connects hospitals across South Africa, so a patient's history, prescriptions and follow-ups are available to the right care team at the right time, with every access logged.</p>
+                <div class="hero-actions">
+                    <a class="btn btn-primary" th:if="${!loggedIn}" th:href="@{/login}"><i class="ti ti-login"></i> Log in to NMAS</a><a class="btn btn-primary" th:if="${loggedIn}" th:href="@{/redirect-dashboard}"><i class="ti ti-layout-dashboard"></i> Go to my dashboard</a>
+                    <a class="btn btn-ghost" href="#how"><i class="ti ti-player-play"></i> See how it works</a>
+                </div>
+            </div>
+            <div class="hero-card">
+                <h3>A visit, start to finish</h3>
+                <ol class="flow">
+                    <li><span class="n">1</span><div><b>Reception</b><small>Registers the patient and checks them in</small></div></li>
+                    <li><span class="n">2</span><div><b>Nurse</b><small>Records vitals, sends to the right doctor</small></div></li>
+                    <li><span class="n">3</span><div><b>Doctor</b><small>Consults, prescribes, books the follow-up</small></div></li>
+                    <li><span class="n">4</span><div><b>Pharmacy</b><small>Dispenses from the facility's own stock</small></div></li>
+                </ol>
+            </div>
+        </div>
+    </section>
+
+    <div class="stats">
+        <div class="wrap">
+            <div class="stat"><b th:text="${facilityCount != null ? facilityCount : '15'}">15</b><span>Participating facilities</span></div>
+            <div class="stat"><b th:text="${doctorCount != null ? doctorCount : '100+'}">100+</b><span>Doctors</span></div>
+            <div class="stat"><b th:text="${patientCount != null ? patientCount : '700+'}">700+</b><span>Patients registered</span></div>
+            <div class="stat"><b>24/7</b><span>AI symptom assistant</span></div>
+        </div>
+    </div>
+
+    <section id="how">
+        <div class="wrap">
+            <div class="eyebrow">How it works</div>
+            <h2 class="title">Built around the way a hospital really runs</h2>
+            <p class="sub">Every facility works with its own patients, staff and pharmacy stock, while a patient's history stays reachable if they are treated somewhere else.</p>
+            <div class="grid3">
+                <div class="card"><div class="ico"><i class="ti ti-user-plus"></i></div><h3>Check-in at reception</h3><p>Walk-ins are registered at the front desk. Booked follow-ups are recognised and go ahead of the queue.</p></div>
+                <div class="card"><div class="ico"><i class="ti ti-heart-rate-monitor"></i></div><h3>Vitals before the doctor</h3><p>Nurses capture blood pressure, temperature, glucose and more, then send the patient to the right doctor.</p></div>
+                <div class="card"><div class="ico"><i class="ti ti-stethoscope"></i></div><h3>Consult and prescribe</h3><p>Doctors see the full history, write structured prescriptions and book the follow-up before the patient leaves.</p></div>
+            </div>
+        </div>
+    </section>
+
+    <section id="features" class="alt">
+        <div class="wrap">
+            <div class="eyebrow">Features</div>
+            <h2 class="title">Everything a facility needs, in one place</h2>
+            <p class="sub">From the front desk to the pharmacy shelf to the facility manager's report.</p>
+            <div class="grid3">
+                <div class="card"><div class="ico"><i class="ti ti-folder-shared"></i></div><h3>Shared patient history</h3><p>Consultations, prescriptions and visits follow the patient across facilities. Every cross-facility view is logged and the home facility is notified.</p></div>
+                <div class="card"><div class="ico"><i class="ti ti-pill"></i></div><h3>Smart prescriptions</h3><p>Choose from the facility's real stock, with dose guidance and a validity period so expired prescriptions can't be dispensed.</p></div>
+                <div class="card"><div class="ico"><i class="ti ti-building-warehouse"></i></div><h3>Pharmacy per facility</h3><p>Each pharmacy manages its own stock, expiry dates and low-stock alerts, and can see whether a medicine was already given elsewhere.</p></div>
+                <div class="card"><div class="ico"><i class="ti ti-video"></i></div><h3>Video consultations</h3><p>Patients request a call during the doctor's published schedule, with prescriptions sent straight from the call.</p></div>
+                <div class="card"><div class="ico"><i class="ti ti-calendar-plus"></i></div><h3>Follow-up bookings</h3><p>Doctors book check-ups and the patient receives a notification, an email and a PDF slip to confirm.</p></div>
+                <div class="card"><div class="ico"><i class="ti ti-chart-bar"></i></div><h3>Performance reports</h3><p>Waiting times, workload, stock health, portal activity and an automatic list of problems to fix early, as PDF or spreadsheet.</p></div>
+            </div>
+        </div>
+    </section>
+
+    <section id="who">
+        <div class="wrap">
+            <div class="eyebrow">Who it's for</div>
+            <h2 class="title">A tailored workspace for every role</h2>
+            <p class="sub">One login page. After signing in, each person lands on their own dashboard with only what they need.</p>
+            <div class="roles">
+                <div class="role"><i class="ti ti-user-heart"></i><h4>Patients</h4><p>View your profile, prescriptions, appointments and who accessed your records. Talk to AIDEN or request a video call.</p></div>
+                <div class="role"><i class="ti ti-device-desktop"></i><h4>Receptionists</h4><p>Register patients and check in walk-ins and booked follow-ups. Reception does not issue or manage repeat-pill collection windows; it only confirms a patient has arrived for a collection the pharmacy already has due.</p></div>
+                <div class="role"><i class="ti ti-nurse"></i><h4>Nurses</h4><p>Work the vitals queue and pass patients to doctors with their readings attached.</p></div>
+                <div class="role"><i class="ti ti-stethoscope"></i><h4>Doctors</h4><p>Your own queue, full histories, prescriptions, video consultations and follow-up bookings.</p></div>
+                <div class="role"><i class="ti ti-pill"></i><h4>Pharmacists</h4><p>Dispense from your own stock, track expiry, and download stock reports.</p></div>
+                <div class="role"><i class="ti ti-building-hospital"></i><h4>Facility administrators</h4><p>Register your staff, see your facility's audit trail and cross-facility access, and run operations reports.</p></div>
+                <div class="role"><i class="ti ti-world"></i><h4>System administration</h4><p>Register facilities and administrators, and see any facility's performance from one portal.</p></div>
+                <div class="role"><i class="ti ti-lock"></i><h4>Everyone</h4><p>Role-based access, audit logging and notifications keep every action accountable.</p></div>
+            </div>
+        </div>
+    </section>
+
+    <section id="aiden" class="alt">
+        <div class="wrap split">
+            <div>
+                <div class="eyebrow">AIDEN symptom assistant</div>
+                <h2 class="title">Tell AIDEN how you feel, in your own language</h2>
+                <p class="sub" style="margin-bottom:10px;">AIDEN listens to what you actually say, answers your questions, asks only what it still needs to know, and works out how urgent your situation is. If you need an ambulance it tells you so straight away. It suggests a doctor only when a consultation is really needed.</p>
+                <ul class="checks">
+                    <li><i class="ti ti-language"></i><span>Understands and replies in the South African languages: English, Afrikaans, isiZulu, isiXhosa, Sepedi, Setswana, Sesotho, Xitsonga, siSwati, Tshivenda and isiNdebele.</span></li>
+                    <li><i class="ti ti-microphone"></i><span>Talk to AIDEN like a voice note: speak, pause, and it answers. No timers or settings.</span></li>
+                    <li><i class="ti ti-history"></i><span>Optionally uses your own NMAS history, only if you switch it on.</span></li>
+                    <li><i class="ti ti-alert-triangle"></i><span>AIDEN is an AI helper, not a doctor, and never replaces a medical visit.</span></li>
+                </ul>
+            </div>
+            <div class="panel" aria-hidden="true">
+                <div class="bubble">Hello! What brings you in today?</div>
+                <div class="bubble me">I have had a headache and fever since yesterday.</div>
+                <div class="bubble">Sorry to hear that. How high is the fever, and is your neck stiff or are you sensitive to light?</div>
+                <div class="risk">
+                    <b>Live risk report</b>
+                    <div style="display:flex;justify-content:space-between;margin-top:10px;"><span>Urgency</span><span>See a doctor soon</span></div>
+                    <div class="bar"><i style="width:45%"></i></div>
+                    <div style="display:flex;justify-content:space-between;"><span>Information collected</span><span>40%</span></div>
+                    <div class="bar"><i style="width:40%"></i></div>
+                    <small style="color:#b4d3c8;">Updates after every answer. An ambulance is advised straight away if danger signs appear.</small>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="facilities">
+        <div class="wrap">
+            <div class="eyebrow">Network</div>
+            <h2 class="title">Participating facilities</h2>
+            <p class="sub">Each facility keeps its own patients, staff, stock and reports, and is part of one connected system.</p>
+            <div class="chips">
+                <span class="chip" th:each="f : ${facilities}"><i class="ti ti-building-hospital"></i><span th:text="${f.facilityName}">Facility</span></span>
+                <span class="chip" th:if="${facilities == null or #lists.isEmpty(facilities)}">Facilities appear here once registered.</span>
+            </div>
+            <div class="emergency" style="margin-top:40px;">
+                <i class="ti ti-urgent"></i>
+                <div><b>In an emergency, do not wait for the system.</b><br>Call an ambulance on <b>10177</b> or <b>112</b>. Mental health crisis: SADAG <b>0800 567 567</b>.</div>
+            </div>
+        </div>
+    </section>
+
+    <section class="cta">
+        <div class="wrap">
+            <h2 class="title">Ready to get started?</h2>
+            <p>Log in with the email address your facility gave you. Forgot your password? You can reset it from the login page.</p>
+            <a class="btn btn-primary" th:if="${!loggedIn}" th:href="@{/login}"><i class="ti ti-login"></i> Log in to NMAS</a><a class="btn btn-primary" th:if="${loggedIn}" th:href="@{/redirect-dashboard}"><i class="ti ti-layout-dashboard"></i> Go to my dashboard</a>
+        </div>
+    </section>
+</main>
+
+<footer>
+    <div class="wrap">
+        <span>&copy; NMAS - National Medical Access System, South Africa</span>
+        <span>Patient records are protected, access-controlled and audited.</span>
+    </div>
+</footer>
+</body>
+</html>

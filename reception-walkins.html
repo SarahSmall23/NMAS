@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Walk-in Visits - NMAS</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+    <style>
+        *{ margin:0; padding:0; box-sizing:border-box; font-family:Arial,sans-serif; }
+        html, body{ height:100%; overflow:hidden; }
+        body{ background:#F0FAF5; color:#1A2E1A; }
+        .layout{ display:flex; height:100vh; }
+        .sidebar{ width:280px; background:#1C2B2B; color:white; padding:30px 20px; display:flex; flex-direction:column; flex-shrink:0; height:100vh; overflow-y:auto; }
+        .logo{ margin-bottom:40px; } .logo h1{ font-size:28px; margin-bottom:6px; } .logo p{ color:#cbd5e1; font-size:13px; }
+        .menu{ display:flex; flex-direction:column; gap:12px; }
+        .menu a{ text-decoration:none; color:white; padding:14px 16px; border-radius:12px; display:flex; align-items:center; gap:12px; transition:0.2s; font-size:15px; }
+        .menu a:hover{ background:rgba(255,255,255,0.12); } .menu .active{ background:#059669; }
+        .logout{ margin-top:auto; padding-top:20px; }
+        .logout a{ text-decoration:none; color:white; padding:14px 16px; border-radius:12px; display:flex; align-items:center; gap:12px; font-size:15px; font-weight:600; background:#dc2626; }
+        .main{ flex:1; padding:35px; height:100vh; overflow-y:auto; min-width:0; }
+        .topbar{ margin-bottom:24px; } .topbar h2{ font-size:30px; color:#1C2B2B; } .topbar p{ color:#64748b; margin-top:5px; }
+        .card{ background:white; border-radius:18px; padding:26px; box-shadow:0 8px 25px rgba(0,0,0,0.06); margin-bottom:28px; overflow-x:auto; }
+        .card h3{ font-size:18px; color:#1C2B2B; margin-bottom:16px; display:flex; align-items:center; gap:8px; } .card h3 i{ color:#059669; }
+        table{ width:100%; border-collapse:collapse; font-size:13px; min-width:720px; }
+        th{ background:#1C2B2B; color:white; padding:12px 14px; text-align:left; font-size:12px; text-transform:uppercase; white-space:nowrap; }
+        td{ padding:12px 14px; border-bottom:1px solid #f1f5f9; vertical-align:middle; } tr:hover td{ background:#f8fff9; }
+        .badge{ display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; }
+        .b-wait{ background:#fef9c3; color:#854d0e; } .b-doc{ background:#dbeafe; color:#1e40af; } .b-in{ background:#dcfce7; color:#166534; }
+        .b-done{ background:#f1f5f9; color:#475569; } .b-appt{ background:#f3e8ff; color:#6b21a8; } .b-walk{ background:#ffedd5; color:#9a3412; } .b-elder{ background:#fee2e2; color:#991b1b; font-weight:700; }
+        .empty{ text-align:center; padding:34px; color:#94a3b8; } .muted{ color:#64748b; font-size:12px; }
+        .btn{ display:inline-flex; align-items:center; gap:6px; background:#059669; color:white; border:none; padding:9px 14px; border-radius:10px; font-size:13px; font-weight:600; cursor:pointer; text-decoration:none; }
+        .btn:hover{ background:#047857; } .btn-red{ background:#dc2626; } .btn-grey{ background:#64748b; }
+        input, select, textarea{ padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:14px; width:100%; }
+        label{ display:block; font-size:12px; font-weight:700; color:#475569; margin-bottom:5px; }
+        .grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:14px; }
+        .alert{ padding:12px 16px; border-radius:10px; margin-bottom:16px; font-size:13px; }
+        .alert-ok{ background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; } .alert-err{ background:#fef2f2; border:1px solid #fecaca; color:#b91c1c; }
+        .note{ background:#fffbeb; border:1px solid #fcd34d; color:#92400e; padding:12px 16px; border-radius:10px; font-size:13px; margin-bottom:20px; }
+        .vit{ display:inline-block; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:3px 8px; margin:2px 4px 2px 0; font-size:12px; }
+        .vit.warn{ background:#fef2f2; border-color:#fecaca; color:#b91c1c; font-weight:700; }
+    </style>
+</head>
+<body>
+<div class="layout">
+    <div class="sidebar">
+        <div class="logo"><h1>NMAS</h1><p>National Medical Access System</p></div>
+        <div class="menu">
+            <a th:href="@{/receptionist-dashboard}"><i class="ti ti-layout-dashboard"></i> Dashboard</a>
+            <a th:href="@{/reception/walk-ins}" class="active"><i class="ti ti-user-check"></i> Walk-in Visits</a>
+            <a th:href="@{/patients/register}"><i class="ti ti-user-plus"></i> Register Patient</a>
+            <a th:href="@{/patients}"><i class="ti ti-users"></i> Patients</a>
+            <a th:href="@{/appointments}"><i class="ti ti-calendar-event"></i> Appointments</a>
+        </div>
+        <div class="logout"><a th:href="@{/logout}"><i class="ti ti-logout"></i> Logout</a></div>
+    </div>
+    <div class="main">
+        <div class="topbar">
+            <h2>Walk-in Visits</h2>
+            <p th:if="${facility != null}" th:text="'Reception at ' + ${facility.facilityName} + ' — register who has arrived and who they came to see. The nurse receives this list straight away.'"></p>
+        </div>
+        <div th:if="${successMessage}" class="alert alert-ok" th:text="${successMessage}"></div>
+        <div th:if="${errorMessage}" class="alert alert-err" th:text="${errorMessage}"></div>
+        <div th:if="${facility == null}" class="note">Your account isn't linked to a facility, so walk-ins can't be recorded.</div>
+
+        <div th:if="${facility != null}">
+            <div class="card">
+                <h3><i class="ti ti-search"></i> Find the patient</h3>
+                <form method="get" th:action="@{/reception/walk-ins}" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:6px;">
+                    <input type="text" name="q" th:value="${q}" placeholder="Name, ID/passport number or phone number" style="flex:1;min-width:240px;"/>
+                    <button class="btn" type="submit"><i class="ti ti-search"></i> Search</button>
+                    <a th:href="@{/patients/register}" class="btn btn-grey"><i class="ti ti-user-plus"></i> New patient? Register</a>
+                </form>
+                <p th:if="${noDoctorsCheckedIn}" class="muted" style="color:#B45309;">No doctor is checked in at this facility right now. Doctors appear in the "Came for" list once they check in on their dashboard.</p>
+                <p class="muted">Reception can register and find patients, but cannot open their medical history.</p>
+
+                <div th:if="${results != null}" style="margin-top:16px;">
+                    <p th:if="${#lists.isEmpty(results)}" class="empty">No patient found. Register them first.</p>
+                    <table th:if="${!#lists.isEmpty(results)}">
+                        <thead><tr><th>Patient</th><th>ID / Passport</th><th>Phone</th><th>Registered at</th><th>Came for</th><th>Reason (optional)</th><th></th></tr></thead>
+                        <tbody>
+                        <tr th:each="p : ${results}">
+                            <td><strong th:text="${p.fullName}"></strong>
+                                <form th:id="'ci-' + ${p.id}" th:action="@{/reception/walk-ins}" method="post" style="display:none;"><input type="hidden" name="patientId" th:value="${p.id}"/></form></td>
+                            <td th:text="${p.idNumber != null ? p.idNumber : p.passportNumber}"></td>
+                            <td th:text="${p.phoneNumber}"></td>
+                            <td th:text="${p.registeredFacility != null ? p.registeredFacility.facilityName : 'Not linked'}"></td>
+                            <td><select name="service" required th:attr="form='ci-' + ${p.id}">
+                                    <option value="">-- Choose doctor / service --</option>
+                                    <option th:each="s : ${services}" th:value="${s.key}" th:text="${s.value}"></option>
+                                </select></td>
+                            <td><input type="text" name="reason" maxlength="400" placeholder="e.g. headaches for 3 days" th:attr="form='ci-' + ${p.id}"/></td>
+                            <td><button class="btn" type="submit" th:attr="form='ci-' + ${p.id}"><i class="ti ti-login"></i> Record visit</button></td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3><i class="ti ti-calendar-check"></i> Booked appointments today <span class="muted">(follow-ups — confirm the patient really booked)</span></h3>
+                <table>
+                    <thead><tr><th>Time</th><th>Patient</th><th>Doctor</th><th>Reason</th><th>Status</th><th></th></tr></thead>
+                    <tbody>
+                    <tr th:if="${#lists.isEmpty(todaysAppointments)}"><td colspan="6" class="empty">No booked appointments waiting to check in.</td></tr>
+                    <tr th:each="a : ${todaysAppointments}">
+                        <td th:text="${a.appointmentTime}"></td>
+                        <td><strong th:text="${a.patient.fullName}"></strong></td>
+                        <td th:text="${a.doctor != null ? 'Dr. ' + a.doctor.fullName + ' (' + a.doctor.specialization + ')' : '—'}"></td>
+                        <td th:text="${a.reason}"></td>
+                        <td><span class="badge b-appt" th:text="${a.status}"></span></td>
+                        <td><form th:action="@{/reception/appointments/{id}/check-in(id=${a.id})}" method="post"><button class="btn"><i class="ti ti-login"></i> Check in</button></form></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="card">
+                <h3><i class="ti ti-pill"></i> Repeat pill collections open today <span class="muted">(confirm the patient was given this window — the pharmacist is then told)</span></h3>
+                <table>
+                    <thead><tr><th>Patient</th><th>Prescription</th><th>Collection window</th><th>Status</th><th></th></tr></thead>
+                    <tbody>
+                    <tr th:if="${#lists.isEmpty(collectionsToday)}"><td colspan="5" class="empty">Nobody is due to collect pills today.</td></tr>
+                    <tr th:each="c : ${collectionsToday}">
+                        <td><strong th:text="${c.patient.fullName}"></strong><br/><span class="muted" th:text="${c.patient.idNumber}"></span></td>
+                        <td th:text="${c.prescription.displayNumber}"></td>
+                        <td th:text="${c.windowStart} + ' → ' + ${c.windowEnd}"></td>
+                        <td>
+                            <span th:if="${c.status == 'DUE'}" class="badge b-wait">Due</span>
+                            <span th:if="${c.status == 'CHECKED_IN'}" class="badge b-doc">Confirmed — with pharmacy</span>
+                            <span th:if="${c.status == 'COLLECTED'}" class="badge b-in" th:text="'Collected ' + ${c.collectedAt != null ? #temporals.format(c.collectedAt, 'HH:mm') : ''}"></span>
+                            <span th:if="${c.status == 'EXPIRED'}" class="badge b-done">Expired</span>
+                        </td>
+                        <td><form th:if="${c.status == 'DUE'}" th:action="@{/reception/collections/{id}/confirm(id=${c.id})}" method="post"><button class="btn"><i class="ti ti-check"></i> Confirm &amp; send to pharmacy</button></form></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="card">
+                <h3><i class="ti ti-list-numbers"></i> Current queue <span class="muted" th:text="'(' + ${#lists.size(queue)} + ')'"></span></h3>
+                <table>
+                    <thead><tr><th>#</th><th>Arrived</th><th>Patient</th><th>Came for</th><th>Type</th><th>Status</th><th></th></tr></thead>
+                    <tbody>
+                    <tr th:if="${#lists.isEmpty(queue)}"><td colspan="7" class="empty">Nobody is waiting.</td></tr>
+                    <tr th:each="w, st : ${queue}">
+                        <td th:text="${st.count}"></td>
+                        <td th:text="${#temporals.format(w.arrivalTime, 'HH:mm')}"></td>
+                        <td><strong th:text="${w.patient.fullName}"></strong> <span th:if="${w.priorityElderly}" class="badge b-elder" th:text="'Elderly ' + ${w.patientAge} + ' — priority'"></span></td>
+                        <td th:text="${w.requestedService}"></td>
+                        <td><span class="badge" th:classappend="${w.visitType == 'APPOINTMENT'} ? 'b-appt' : 'b-walk'" th:text="${w.visitType == 'APPOINTMENT'} ? 'Booked appointment' : 'Walk-in'"></span></td>
+                        <td>
+                            <span th:if="${w.status == 'WAITING_VITALS'}" class="badge b-wait">Waiting for nurse</span>
+                            <span th:if="${w.status == 'WAITING_DOCTOR'}" class="badge b-doc" th:text="'With Dr. ' + ${w.assignedDoctor.fullName} + ' (waiting)'"></span>
+                            <span th:if="${w.status == 'IN_CONSULTATION'}" class="badge b-in">In consultation</span>
+                        </td>
+                        <td><form th:if="${w.status != 'IN_CONSULTATION'}" th:action="@{/reception/walk-ins/{id}/cancel(id=${w.id})}" method="post" onsubmit="return confirm('Cancel this visit?')"><button class="btn btn-red">Cancel</button></form></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+</div>
+<script>
+// Keep the list live: reload every 15s unless someone is typing in a form.
+setInterval(function () {
+    var a = document.activeElement;
+    if (document.hidden || (a && /INPUT|SELECT|TEXTAREA/.test(a.tagName))) return;
+    location.reload();
+}, 15000);
+</script>
+</body>
+</html>

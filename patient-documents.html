@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Patient Documents - NMAS</title>
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+    <style>
+        *{ margin:0; padding:0; box-sizing:border-box; font-family:Arial,sans-serif; }
+        body{ background:#F0FAF5; color:#1A2E1A; padding:35px; }
+        .topbar{ display:flex; justify-content:space-between; align-items:center; margin-bottom:30px; }
+        .topbar h2{ font-size:28px; color:#1C2B2B; }
+        .topbar p{ color:#64748b; margin-top:5px; }
+        .actions-top{ display:flex; gap:12px; align-items:center; }
+        .btn{ display:inline-flex; align-items:center; gap:8px; text-decoration:none; background:#059669; color:white; padding:11px 16px; border-radius:10px; font-size:13px; font-weight:600; transition:0.2s; }
+        .btn:hover{ background:#047857; }
+        .btn-sec{ background:#1C2B2B; }
+        .btn-sec:hover{ background:#334155; }
+        .table-card{ background:white; border-radius:18px; box-shadow:0 8px 25px rgba(0,0,0,0.06); overflow:hidden; }
+        table{ width:100%; border-collapse:collapse; font-size:13px; }
+        th{ background:#1C2B2B; color:white; padding:14px 16px; text-align:left; font-size:12px; text-transform:uppercase; letter-spacing:0.5px; }
+        td{ padding:13px 16px; border-bottom:1px solid #f1f5f9; vertical-align:top; }
+        tr:hover td{ background:#f8fff9; }
+        .badge{ display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; background:#d1fae5; color:#065f46; }
+        .empty{ text-align:center; padding:60px; color:#94a3b8; }
+        .empty i{ font-size:48px; margin-bottom:15px; display:block; }
+    </style>
+</head>
+<body>
+<div class="topbar">
+    <div>
+        <h2>Medical Documents</h2>
+        <p th:if="${patient}" th:text="'Patient: ' + ${patient.fullName}"></p>
+    </div>
+    <div class="actions-top">
+        <a th:href="@{/documents/upload(patientId=${patient?.id})}" class="btn">
+            <i class="ti ti-upload"></i> Upload Document
+        </a>
+        <a th:href="@{/redirect-dashboard}" class="btn btn-sec">
+            <i class="ti ti-arrow-left"></i> Dashboard
+        </a>
+    </div>
+</div>
+
+<div class="table-card">
+    <div th:if="${#lists.isEmpty(documents)}" class="empty">
+        <i class="ti ti-file-off"></i>
+        No documents uploaded for this patient yet.
+    </div>
+    <table th:if="${!#lists.isEmpty(documents)}">
+        <thead>
+            <tr>
+                <th>Document Type</th>
+                <th>File Name</th>
+                <th>Uploaded By</th>
+                <th>Upload Date</th>
+                <th>Notes</th>
+                <th>Download</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="doc : ${documents}">
+                <td><span class="badge" th:text="${doc.documentType}"></span></td>
+                <td th:text="${doc.fileName}"></td>
+                <td th:text="${doc.uploadedBy}"></td>
+                <td th:text="${doc.uploadDate}"></td>
+                <td th:text="${doc.notes}"></td>
+                <td>
+                    <a th:href="@{/documents/download/{id}(id=${doc.id})}" class="btn" style="padding:6px 12px;">
+                        <i class="ti ti-download"></i> Download
+                    </a>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

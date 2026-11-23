@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Video Consultation — Doctor | NMAS</title>
+    <link rel="icon" href="data:,">
+    <style>
+        :root {
+            --bg:#0d1117; --surface:#161b22; --surface2:#1c2128; --border:#30363d;
+            --text:#e6edf3; --muted:#7d8590; --accent:#1f6feb; --accent-light:#388bfd;
+            --accent-bg:rgba(31,111,235,0.15); --danger:#da3633; --warning:#d29922;
+            --success:#23b98e; --radius:10px; --font:'Inter',system-ui,sans-serif;
+        }
+        *{box-sizing:border-box;margin:0;padding:0;}
+        body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;font-size:14px;}
+        header{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;}
+        .logo{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:600;}
+        .logo-icon{width:30px;height:30px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;}
+        .hdr-right{display:flex;align-items:center;gap:14px;font-size:12px;color:var(--muted);}
+        .dot{width:8px;height:8px;border-radius:50%;background:var(--muted);}
+        .dot.green{background:var(--success);box-shadow:0 0 0 3px rgba(35,185,142,0.15);}
+        .dot.red{background:var(--danger);}
+        .status-pill{display:flex;align-items:center;gap:6px;background:var(--surface2);padding:8px 12px;border-radius:8px;border:1px solid var(--border);}
+
+        .room{display:grid;grid-template-columns:1fr 360px;flex:1;overflow:hidden;}
+
+        /* VIDEO */
+        .video-area{background:#000;position:relative;overflow:hidden;}
+        #remote-video{width:100%;height:100%;object-fit:cover;display:block;}
+        #local-video{position:absolute;bottom:80px;right:16px;width:180px;height:120px;object-fit:cover;border-radius:10px;border:2px solid var(--accent);background:#111;z-index:10;transform:scaleX(-1);}
+        .video-overlay{position:absolute;inset:0;z-index:5;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:var(--muted);}
+        .big-avatar{width:80px;height:80px;border-radius:50%;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:28px;}
+        .controls-bar{position:absolute;bottom:0;left:0;right:0;padding:16px 24px;background:linear-gradient(transparent,rgba(0,0,0,0.85));display:flex;align-items:center;justify-content:center;gap:14px;z-index:20;}
+        .ctrl-btn{width:48px;height:48px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.14);color:#fff;transition:all 0.15s;font-size:18px;}
+        .ctrl-btn:hover{background:rgba(255,255,255,0.24);transform:scale(1.06);}
+        .ctrl-btn.on{background:var(--accent);}
+        .ctrl-btn.end{background:var(--danger);width:56px;height:56px;}
+
+        /* SIDE PANEL */
+        .side-panel{background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+        .pt-info{padding:12px 16px;border-bottom:1px solid var(--border);background:var(--surface2);}
+        .pt-name{font-weight:600;font-size:13px;margin-bottom:2px;}
+        .pt-meta{font-size:11px;color:var(--muted);}
+        .pt-notes{margin-top:8px;padding:8px 10px;background:var(--bg);border-left:3px solid var(--accent);border-radius:4px;font-size:12px;color:var(--text);white-space:pre-wrap;}
+
+        /* Prescription editor */
+        .rx-section{padding:14px 16px;border-bottom:1px solid var(--border);flex:0 0 auto;}
+        .section-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);margin-bottom:8px;}
+        #rxInput{width:100%;min-height:120px;max-height:160px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:12px;font-size:13px;resize:vertical;outline:none;font-family:var(--font);line-height:1.6;}
+        #rxInput:focus{border-color:var(--accent);}
+        .rx-actions{display:flex;flex-direction:column;gap:8px;margin-top:8px;}
+        .rx-save-btn{width:100%;padding:9px;background:var(--accent);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;}
+        .rx-save-btn:hover{background:var(--accent-light);}
+        .sync-note{font-size:10px;color:var(--muted);margin-top:4px;display:flex;align-items:center;gap:4px;}
+        .sync-dot{width:5px;height:5px;border-radius:50%;background:var(--accent-light);}
+
+        /* Prescription modal */
+        .rx-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9997;display:none;align-items:center;justify-content:center;padding:20px;}
+        .rx-modal-overlay.open{display:flex;}
+        .rx-modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;width:100%;max-width:720px;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;}
+        .rx-modal-header{padding:18px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+        .rx-modal-header h3{font-size:16px;color:var(--text);}
+        .rx-modal-header p{font-size:12px;color:var(--muted);margin-top:2px;}
+        .rx-modal-close{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1;}
+        .rx-modal-close:hover{color:var(--text);}
+        .rx-modal-body{padding:20px 22px;overflow-y:auto;flex:1;}
+        .rx-med-row{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:14px;position:relative;}
+        .rx-med-row-remove{position:absolute;top:10px;right:10px;background:none;border:none;color:var(--danger);cursor:pointer;font-size:16px;}
+        .rx-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;}
+        .rx-field label{display:block;font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;}
+        .rx-field select, .rx-field textarea, .rx-field input[type="text"]{width:100%;padding:9px 10px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:12.5px;font-family:inherit;}
+        .rx-field select:focus, .rx-field textarea:focus, .rx-field input[type="text"]:focus{border-color:var(--accent);outline:none;}
+        .rx-med-info{margin-top:6px;padding:7px 10px;background:rgba(5,150,105,0.12);border:1px solid rgba(5,150,105,0.35);border-radius:6px;font-size:11px;color:var(--text);line-height:1.5;}
+        .rx-dosage-hint{margin-top:6px;padding:7px 10px;background:rgba(217,119,6,0.12);border:1px solid rgba(217,119,6,0.35);border-radius:6px;font-size:11px;color:var(--text);line-height:1.5;}
+        .rx-timing-row{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;grid-column:1/-1;}
+        .rx-timing-row label{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text);cursor:pointer;font-weight:500;}
+        .rx-timing-row input{width:14px;height:14px;cursor:pointer;}
+        .rx-add-med-btn{width:100%;padding:10px;background:transparent;border:1.5px dashed var(--border);border-radius:8px;color:var(--accent);font-size:12.5px;font-weight:600;cursor:pointer;}
+        .rx-add-med-btn:hover{border-color:var(--accent);background:var(--accent-bg);}
+        .rx-modal-footer{padding:16px 22px;border-top:1px solid var(--border);display:flex;gap:10px;flex-shrink:0;}
+        .rx-modal-footer button{flex:1;padding:11px;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;}
+        .rx-btn-save{background:var(--accent);color:#fff;}
+        .rx-btn-save:hover{background:var(--accent-light);}
+        .rx-btn-save:disabled{opacity:0.5;cursor:not-allowed;}
+        .rx-btn-cancel{background:var(--surface2);color:var(--text);border:1px solid var(--border) !important;}
+        .rx-error{color:var(--danger);font-size:12px;margin-top:10px;display:none;}
+        .rx-error.show{display:block;}
+
+        /* Chat */
+        .chat-section{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+        .chat-messages{flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:8px;}
+        .msg{display:flex;flex-direction:column;}
+        .msg.mine{align-items:flex-end;}
+        .bubble{padding:8px 12px;border-radius:8px;font-size:13px;background:var(--surface2);border:1px solid var(--border);color:var(--text);max-width:88%;word-break:break-word;line-height:1.5;}
+        .msg.mine .bubble{background:var(--accent-bg);border-color:rgba(31,111,235,0.3);}
+        .msg-meta{font-size:10px;color:var(--muted);margin-top:3px;padding:0 4px;}
+        .chat-input-row{padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px;}
+        .chat-input-row input{flex:1;padding:9px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);outline:none;font-size:13px;}
+        .chat-input-row input:focus{border-color:var(--accent);}
+        .send-btn{padding:9px 14px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius);cursor:pointer;font-size:13px;font-weight:600;}
+
+        #toast-container{position:fixed;top:18px;right:18px;display:flex;flex-direction:column;gap:8px;z-index:9999;}
+        .toast{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:11px 16px;font-size:13px;min-width:220px;box-shadow:0 4px 12px rgba(0,0,0,0.3);transition:opacity 0.2s;}
+        .call-ended-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:99999;display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px;color:#fff;text-align:center;}
+        .call-ended-overlay.show{display:flex;}
+        .call-ended-overlay .icon{font-size:52px;}
+        .call-ended-overlay p{color:var(--muted);font-size:14px;}
+        .toast.warn{border-color:var(--warning);}
+        .toast.ok{border-color:var(--success);}
+    </style>
+</head>
+<body>
+<div th:replace="~{fragments/tab-identity-guard :: tabGuard}"></div>
+
+<header>
+    <div class="logo">
+        <div class="logo-icon">🧑‍⚕️</div>
+        NMAS Practitioner Suite — Virtual Consultation
+    </div>
+    <div class="hdr-right">
+        <div class="status-pill">
+            <div class="dot red" id="peerDot"></div>
+            <span id="peerStatusText">Waiting for patient...</span>
+        </div>
+        <span id="conn-label" style="color:var(--muted);font-size:11px;">Connecting...</span>
+        <span>Room: <strong th:text="${request.roomId}">room</strong></span>
+    </div>
+</header>
+
+<div class="room">
+    <div class="video-area">
+        <div class="video-overlay" id="videoOverlay">
+            <div class="big-avatar">👤</div>
+            <p id="overlayText">Waiting for the patient to join this room...</p>
+            <button id="retryConnectionBtn" onclick="retryConnection()"
+                    style="display:none;background:#059669;color:white;border:none;padding:10px 18px;
+                           border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
+                <i class="ti ti-refresh"></i> Retry Connection
+            </button>
+        </div>
+        <video id="remote-video" autoplay playsinline></video>
+        <video id="local-video" autoplay playsinline muted></video>
+        <div class="controls-bar">
+            <button class="ctrl-btn on" id="micBtn" onclick="toggleMic()" title="Toggle Mic">🎙️</button>
+            <button class="ctrl-btn on" id="camBtn" onclick="toggleCam()" title="Toggle Camera">🎥</button>
+            <button class="ctrl-btn end" onclick="endCall()" title="End Call">☎️</button>
+        </div>
+    </div>
+
+    <div class="side-panel">
+        <div class="pt-info">
+            <div class="pt-name" th:text="${request.patient != null ? request.patient.fullName : 'Patient'}">Patient</div>
+            <div class="pt-meta">
+                ID: <span th:text="${request.patient != null ? request.patient.idNumber : 'N/A'}">N/A</span>
+                &nbsp;·&nbsp;
+                <span th:text="${request.patient != null ? request.patient.phoneNumber : ''}"></span>
+            </div>
+            <div class="pt-meta" style="margin-top:2px;" th:if="${request.patient != null and request.patient.chronicConditions != null}">
+                Chronic: <span th:text="${request.patient.chronicConditions}"></span>
+            </div>
+            <div class="pt-meta" style="margin-top:2px;" th:if="${request.patient != null and request.patient.allergies != null}">
+                Allergies: <span th:text="${request.patient.allergies}"></span>
+            </div>
+            <div class="pt-notes" th:if="${request.notes != null and !#strings.isEmpty(request.notes)}" th:text="${request.notes}"></div>
+        </div>
+
+        <div class="rx-section">
+            <div class="section-lbl">📋 Live Notes</div>
+            <textarea id="rxInput"
+                      th:placeholder="'Notes visible to ' + ${request.patient != null ? request.patient.fullName : 'patient'} + ' in real time...'"
+                      oninput="syncRx()"></textarea>
+            <div class="rx-actions">
+                <button class="rx-save-btn" onclick="saveRx()" style="background:var(--surface2);border:1px solid var(--border);">💾 Save Quick Note</button>
+                <button class="rx-save-btn" onclick="openPrescriptionModal()">📝 Write Official Prescription</button>
+            </div>
+            <div class="sync-note"><div class="sync-dot"></div>Notes sync live to the patient's screen · use "Write Official Prescription" for a proper prescription with medication, dosage &amp; instructions</div>
+        </div>
+
+        <div class="chat-section">
+            <div class="section-lbl" style="padding:12px 16px 0;">💬 Chat with Patient</div>
+            <div class="chat-messages" id="chatMessages"></div>
+            <div class="chat-input-row">
+                <input type="text" id="chatInput" placeholder="Type a message..." onkeydown="if(event.key==='Enter')sendChat()"/>
+                <button class="send-btn" onclick="sendChat()">Send</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="toast-container"></div>
+<div class="call-ended-overlay" id="callEndedOverlay">
+    <div class="icon">📴</div>
+    <h3>Call Ended</h3>
+    <p id="callEndedText">Returning to your video calls list...</p>
+</div>
+
+<div class="rx-modal-overlay" id="rxModalOverlay">
+    <div class="rx-modal">
+        <div class="rx-modal-header">
+            <div>
+                <h3>📝 Write Official Prescription</h3>
+                <p th:text="'For ' + (${request.patient != null ? request.patient.fullName : 'patient'}) + (${request.patient != null and request.patient.idNumber != null} ? ' — ID: ' + request.patient.idNumber : '')">For patient</p>
+            </div>
+            <button class="rx-modal-close" onclick="closePrescriptionModal()">✕</button>
+        </div>
+        <div class="rx-modal-body" id="rxMedRowsContainer">
+            <!-- medication rows injected here by JS -->
+        </div>
+        <div style="padding:0 22px 16px;">
+            <button class="rx-add-med-btn" onclick="addMedicationRow()">+ Add Another Medication</button>
+            <div class="rx-error" id="rxModalError"></div>
+        </div>
+        <div class="rx-modal-footer">
+            <button class="rx-btn-cancel" onclick="closePrescriptionModal()">Cancel</button>
+            <button class="rx-btn-save" id="rxModalSaveBtn" onclick="savePrescriptionModal()">💾 Save Prescription</button>
+        </div>
+    </div>
+</div>
+
+<script th:inline="javascript">
+    const ROOM_ID    = /*[[${request.roomId}]]*/ 'room';
+    const REQUEST_ID = /*[[${request.id}]]*/ 0;
+    const PATIENT_ID = /*[[${request.patient != null ? request.patient.id : 0}]]*/ 0;
+    const CONSULTATION_ID = /*[[${consultationId}]]*/ 0;
+    const ALL_MEDICATIONS = /*[[${allMedications != null ? allMedications : new int[0]}]]*/ [];
+    const ROLE       = 'doctor';
+    const WS_PROTO   = location.protocol === 'https:' ? 'wss' : 'ws';
+    const WS_URL     = `${WS_PROTO}://${location.host}/consultation/${ROOM_ID}/${ROLE}`;
+
+    let ws, localStream, pc;
+    let micOn = true, camOn = true;
+    let patientPresent = false;
+    let pendingIce = [];
+    const iceConfig = {
+        iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' },
+            { urls: 'stun:stun2.l.google.com:19302' },
+            { urls: 'stun:stun.l.google.com:19302' },
+            // STUN alone only works when at least one side has an open/reachable
+            // NAT — two browsers on different networks (different wifi, mobile
+            // data, a corporate firewall, a VPN...) often can't find a direct
+            // path at all, even though signaling (this WebSocket) connects fine.
+            // A TURN relay is the fallback for exactly that case.
+            { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+            { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+            { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
+        ],
+        iceCandidatePoolSize: 4
+    };
+
+    // ── Get camera/mic and connect immediately — the doctor already
+    //    accepted this specific patient's request before landing here, so
+    //    there's no separate "duty toggle" or "incoming call" step needed. ──
+    let wsReconnectAttempts = 0;
+    let wsReconnectTimer = null;
+    let intentionalClose = false;
+
+    async function connect() {
+        console.log('[AIDEN-VIDEO] connect() called, role=doctor, room=' + ROOM_ID);
+        if (!localStream) {
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                document.getElementById('local-video').srcObject = localStream;
+                console.log('[AIDEN-VIDEO] getUserMedia OK — tracks:', localStream.getTracks().map(t => t.kind));
+            } catch(e) {
+                console.error('[AIDEN-VIDEO] getUserMedia FAILED:', e.name, e.message);
+                const reason = e.name === 'NotReadableError'
+                    ? 'Your camera/mic is already in use by another app or browser tab — close it there first, or use a different device. You can still receive the other side\'s video/audio.'
+                    : e.name === 'NotAllowedError'
+                    ? 'Camera/mic access was blocked. Allow access for this site in your browser settings and rejoin.'
+                    : 'Camera/mic unavailable — video will not work on your side.';
+                toast(reason, 'warn');
+            }
+        }
+        openSocket();
+    }
+
+    function openSocket() {
+        console.log('[AIDEN-VIDEO] Opening WebSocket to', WS_URL);
+        ws = new WebSocket(WS_URL);
+
+        ws.onopen = () => {
+            console.log('[AIDEN-VIDEO] WebSocket OPEN');
+            wsReconnectAttempts = 0;
+            setConnLabel('Signaling connected', true);
+            // If we already have a peer connection that dropped its ICE
+            // link, renegotiate rather than waiting for a fresh offer.
+            if (pc && patientPresent && (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected')) {
+                makeOffer(true);
+            }
+        };
+
+        ws.onmessage = async (ev) => {
+            const msg = JSON.parse(ev.data);
+            console.log('[AIDEN-VIDEO] WS message received:', msg);
+
+            // Patient joined / left the room
+            if (msg.peerStatus === 'patient') {
+                setPatientPresence(msg.connected);
+                return;
+            }
+
+            // Call ended by either party — leave in sync instead of staying
+            // on a call whose status has already changed server-side.
+            if (msg.callEnded) {
+                intentionalClose = true;
+                showCallEndedOverlay(msg.endedBy === 'patient' ? 'The patient ended the call.' : 'You ended the call.');
+                setTimeout(() => { window.location.href = '/video/incoming'; }, 2000);
+                return;
+            }
+
+            // Chat from patient
+            if (msg.chat) { renderMsg(msg.chat, false); return; }
+
+            // WebRTC signaling
+            await handleSignal(msg);
+        };
+
+        ws.onerror = (e) => { console.error('[AIDEN-VIDEO] WebSocket ERROR', e); toast('Connection hiccup — attempting to recover...', 'warn'); };
+
+        ws.onclose = (e) => {
+            console.warn('[AIDEN-VIDEO] WebSocket CLOSED code=' + e.code + ' reason=' + e.reason + ' wasClean=' + e.wasClean);
+            setConnLabel('Signaling disconnected', false);
+            if (intentionalClose) return;
+            // Auto-reconnect with a short backoff so a brief network drop
+            // (wifi hiccup, phone switching towers, etc.) doesn't end the
+            // whole consultation — the call resumes as soon as the socket
+            // is back up.
+            wsReconnectAttempts++;
+            const delay = Math.min(1000 * wsReconnectAttempts, 5000);
+            clearTimeout(wsReconnectTimer);
+            wsReconnectTimer = setTimeout(openSocket, delay);
+        };
+    }
+
+    function setConnLabel(text, ok) {
+        const label = document.getElementById('conn-label');
+        if (label) label.textContent = text;
+    }
+
+    function setPatientPresence(connected) {
+        console.log('[AIDEN-VIDEO] setPatientPresence(' + connected + ')');
+        patientPresent = connected;
+        document.getElementById('peerDot').className = 'dot' + (connected ? ' green' : ' red');
+        document.getElementById('peerStatusText').textContent = connected ? 'Patient connected' : 'Patient not connected';
+        if (connected) {
+            document.getElementById('overlayText').textContent = 'Connecting video...';
+            document.getElementById('retryConnectionBtn').style.display = 'none';
+            makeOffer();
+            startConnectTimeout();
+        } else {
+            document.getElementById('videoOverlay').style.display = 'flex';
+            document.getElementById('overlayText').textContent = 'Waiting for the patient to join this room...';
+            document.getElementById('retryConnectionBtn').style.display = 'none';
+            document.getElementById('remote-video').srcObject = null;
+            clearTimeout(connectTimeoutTimer);
+            if (pc) { pc.close(); pc = null; }
+            pendingIce = [];
+        }
+    }
+
+    // If the video/audio hasn't actually connected a little while after both
+    // sides are in the room, signaling is fine (or the patient wouldn't show
+    // as connected) but ICE itself couldn't find a usable path — usually two
+    // different, restrictive networks with no direct route between them.
+    // Surface that plainly instead of leaving "Connecting video..." forever.
+    let connectTimeoutTimer = null;
+    function startConnectTimeout() {
+        clearTimeout(connectTimeoutTimer);
+        connectTimeoutTimer = setTimeout(() => {
+            if (!pc || (pc.iceConnectionState !== 'connected' && pc.iceConnectionState !== 'completed')) {
+                document.getElementById('overlayText').textContent =
+                    'Still trying to connect video — this can happen when both sides are on very restrictive networks (a strict corporate firewall or VPN). Signaling is working; retrying may help.';
+                document.getElementById('retryConnectionBtn').style.display = 'inline-block';
+            }
+        }, 15000);
+    }
+
+    function retryConnection() {
+        document.getElementById('retryConnectionBtn').style.display = 'none';
+        document.getElementById('overlayText').textContent = 'Connecting video...';
+        if (pc) { pc.close(); pc = null; }
+        pendingIce = [];
+        offerInFlight = false;
+        makeOffer();
+        startConnectTimeout();
+    }
+
+    // The doctor always initiates the WebRTC offer once the patient is
+    // known to be in the room — this is deterministic regardless of which
+    // side opened the page first, avoiding the race that used to leave
+    // both sides only ever seeing their own camera.
+    let offerInFlight = false;
+    async function makeOffer(iceRestart) {
+        if (offerInFlight) { console.log('[AIDEN-VIDEO] makeOffer skipped — already in flight'); return; }
+        offerInFlight = true;
+        console.log('[AIDEN-VIDEO] makeOffer() iceRestart=' + !!iceRestart);
+        ensurePC();
+        const offer = await pc.createOffer(iceRestart ? { iceRestart: true } : {});
+        await pc.setLocalDescription(offer);
+        console.log('[AIDEN-VIDEO] Sending offer, localStream tracks=' + (localStream ? localStream.getTracks().length : 0));
+        ws.send(JSON.stringify({ sdp: pc.localDescription }));
+        offerInFlight = false;
+    }
+
+    let iceRetryTimer = null;
+    function ensurePC() {
+        if (pc) return pc;
+        console.log('[AIDEN-VIDEO] Creating new RTCPeerConnection. localStream present:', !!localStream);
+        pc = new RTCPeerConnection(iceConfig);
+        if (localStream) {
+            localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+        } else {
+            // No camera/mic of our own (permission denied, or — very common when
+            // testing two browsers on the SAME machine — the webcam is already
+            // held by the other browser and can't be opened twice at once).
+            // Without explicitly requesting to receive media here, an offer
+            // built with zero tracks and no transceivers can end up with no
+            // media sections at all, meaning the call wouldn't just be
+            // one-way — it could fail to carry any video/audio in EITHER
+            // direction, even though the peer's camera works fine. Adding
+            // recvonly transceivers keeps the call meaningful: we can still
+            // see/hear the other side even though they can't see/hear us.
+            console.warn('[AIDEN-VIDEO] No localStream when creating PC — requesting receive-only audio/video so the call still carries the peer\'s media.');
+            pc.addTransceiver('audio', { direction: 'recvonly' });
+            pc.addTransceiver('video', { direction: 'recvonly' });
+        }
+        pc.ontrack = (e) => {
+            console.log('[AIDEN-VIDEO] ontrack fired — remote stream received');
+            document.getElementById('remote-video').srcObject = e.streams[0];
+            document.getElementById('videoOverlay').style.display = 'none';
+        };
+        pc.onicecandidate = (e) => {
+            if (e.candidate) { console.log('[AIDEN-VIDEO] Local ICE candidate:', e.candidate.type, e.candidate.protocol); ws.send(JSON.stringify({ ice: e.candidate })); }
+            else console.log('[AIDEN-VIDEO] ICE gathering complete');
+        };
+        // If the media connection drops (wifi hiccup, network switch), try
+        // an ICE restart automatically instead of leaving the call frozen.
+        pc.oniceconnectionstatechange = () => {
+            const state = pc.iceConnectionState;
+            console.log('[AIDEN-VIDEO] iceConnectionState =', state);
+            if (state === 'connected' || state === 'completed') {
+                setConnLabel('Video connected', true);
+                clearTimeout(iceRetryTimer);
+                clearTimeout(connectTimeoutTimer);
+                document.getElementById('retryConnectionBtn').style.display = 'none';
+            } else if (state === 'disconnected') {
+                setConnLabel('Reconnecting video...', false);
+                clearTimeout(iceRetryTimer);
+                iceRetryTimer = setTimeout(() => {
+                    if (pc && pc.iceConnectionState === 'disconnected') makeOffer(true);
+                }, 3000);
+            } else if (state === 'failed') {
+                setConnLabel('Reconnecting video...', false);
+                makeOffer(true);
+                startConnectTimeout();
+            }
+        };
+        return pc;
+    }
+
+    async function handleSignal(msg) {
+        if (msg.sdp) {
+            console.log('[AIDEN-VIDEO] Received SDP type=' + msg.sdp.type);
+            ensurePC();
+            await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+            if (msg.sdp.type === 'offer') {
+                const answer = await pc.createAnswer();
+                await pc.setLocalDescription(answer);
+                console.log('[AIDEN-VIDEO] Sending answer');
+                ws.send(JSON.stringify({ sdp: pc.localDescription }));
+            }
+            while (pendingIce.length) {
+                const c = pendingIce.shift();
+                try { await pc.addIceCandidate(new RTCIceCandidate(c)); } catch(e) { console.error('[AIDEN-VIDEO] addIceCandidate (queued) failed:', e); }
+            }
+        } else if (msg.ice) {
+            if (pc && pc.remoteDescription && pc.remoteDescription.type) {
+                try { await pc.addIceCandidate(new RTCIceCandidate(msg.ice)); } catch(e) { console.error('[AIDEN-VIDEO] addIceCandidate failed:', e); }
+            } else {
+                console.log('[AIDEN-VIDEO] Queuing ICE candidate — no remote description yet');
+                pendingIce.push(msg.ice);
+            }
+        }
+    }
+
+    // Sync prescription live to patient screen as doctor types
+    let rxTimer;
+    function syncRx() {
+        clearTimeout(rxTimer);
+        rxTimer = setTimeout(() => {
+            const text = document.getElementById('rxInput').value;
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ prescription: text }));
+            }
+        }, 300);
+    }
+
+    // Save prescription to the patient's official prescription record
+    async function saveRx() {
+        const text = document.getElementById('rxInput').value.trim();
+        if (!text) { toast('Write a prescription first.', 'warn'); return; }
+        try {
+            const res = await fetch('/video/save-prescription', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({ requestId: REQUEST_ID, patientId: PATIENT_ID, prescription: text })
+            });
+            if (res.status === 401 || res.status === 403) {
+                toast(res.status === 403
+                    ? 'Access denied — if you\'re also logged in as the patient in another tab of this SAME browser, that can replace this login. Use a private/incognito window for one side.'
+                    : 'Your session has expired — please log in again.', 'warn');
+                return;
+            }
+            if (res.ok) {
+                toast('✅ Quick note saved to patient record!', 'ok');
+            } else {
+                toast('Failed to save — try again.', 'warn');
+            }
+        } catch(e) {
+            console.error('Quick note save error:', e);
+            toast('Could not reach the server. Check your connection.', 'warn');
+        }
+    }
+
+    /* ── Official Prescription Modal ──
+       A full structured prescription (medication + dosage + frequency +
+       route + timing), written during the video call and saved through the
+       exact same backend logic used by the standard clinic prescription
+       form — so it appears identically everywhere else in NMAS (patient
+       dashboard, /prescriptions, pharmacist dispensary). Uses an AJAX save
+       (no page navigation) so the call itself is never interrupted. */
+    const RX_DOSAGES = ['100mg','200mg','250mg','400mg','500mg','750mg','1000mg','5mg','10mg','20mg','25mg','50mg','1 puff','2 puffs','5ml','10ml','15ml','1 tablet','2 tablets','1 capsule','10IU','100IU/ml','Apply thin layer','2 drops','1 patch','1 sachet'];
+    const RX_FREQUENCIES = ['Once daily','Twice daily','Three times daily','Four times daily','Every 4 hours','Every 6 hours','Every 8 hours','Every 12 hours','As needed (PRN)','Weekly','Stat (once)'];
+    const RX_DURATIONS = ['1 day','3 days','5 days','7 days','10 days','14 days','1 month','3 months','6 months','Ongoing (chronic)'];
+    const RX_ROUTES = ['Oral','Intravenous (IV)','Intramuscular (IM)','Subcutaneous (SC)','Inhaled','Topical','Sublingual','Rectal','Nasal','Ophthalmic'];
+    const RX_MEAL = ['Before meals','With meals','After meals','On empty stomach','With water','Not applicable'];
+
+    let rxRowCount = 0;
+
+    function openPrescriptionModal() {
+        if (!CONSULTATION_ID) { toast('Prescription panel is not ready yet — please reload the page.', 'warn'); return; }
+        const container = document.getElementById('rxMedRowsContainer');
+        if (container.children.length === 0) addMedicationRow();
+        document.getElementById('rxModalOverlay').classList.add('open');
+    }
+
+    function closePrescriptionModal() {
+        document.getElementById('rxModalOverlay').classList.remove('open');
+        document.getElementById('rxModalError').classList.remove('show');
+    }
+
+    function rxSelect(options, placeholder) {
+        let html = '<option value="">-- ' + placeholder + ' --</option>';
+        options.forEach(o => { html += '<option>' + o + '</option>'; });
+        return html;
+    }
+
+    function rxDatalist(options) {
+        return options.map(o => '<option>' + o + '</option>').join('');
+    }
+
+    /**
+     * Same medication-info behaviour as the standard prescription form: shows
+     * capacity/strength + storage unit + stock, pre-fills the dosage field
+     * with the medicine's own strength, shows a form-specific dosing hint
+     * (spoon size for syrups, mg/mL for injections, puffs for inhalers...),
+     * and suggests a sensible default route — all without interrupting the
+     * call, since this panel never navigates away from the video room.
+     */
+    function rxUpdateMedInfo(select, box, dosageInput, hint, routeSelect) {
+        const opt = select.options[select.selectedIndex];
+        if (!opt || !opt.value) {
+            box.style.display = 'none';
+            hint.style.display = 'none';
+            return;
+        }
+        const form = (opt.getAttribute('data-form') || '').trim();
+        const strength = (opt.getAttribute('data-strength') || '').trim();
+        const unit = (opt.getAttribute('data-unit') || '').trim();
+        const stock = opt.getAttribute('data-stock');
+        const outOfStock = opt.getAttribute('data-outofstock') === 'true';
+
+        box.style.display = 'block';
+        box.innerHTML =
+            '<strong>' + (form || 'Medication') + '</strong>' +
+            (strength ? ' &middot; Capacity/strength: <strong>' + strength + '</strong>' : '') +
+            (unit ? ' &middot; Stored as: <strong>' + unit + '</strong>' : '') +
+            (stock !== null ? ' &middot; Stock: <strong>' + stock + ' ' + (unit || 'unit(s)').toLowerCase() + '</strong>' : '') +
+            (outOfStock ? ' <span style="color:#dc2626;font-weight:700;">&mdash; OUT OF STOCK</span>' : '');
+
+        if (strength && dosageInput.dataset.userEdited !== 'true') {
+            dosageInput.value = strength;
+        }
+
+        const f = form.toLowerCase();
+        let hintText = '';
+        if (f.indexOf('syrup') > -1 || f.indexOf('suspension') > -1 || f.indexOf('solution') > -1) {
+            hintText = 'Oral liquid — give the dose in mL. As a guide: 5mL \u2248 1 teaspoon, 15mL \u2248 1 tablespoon.';
+        } else if (f.indexOf('injection') > -1 || f.indexOf('vial') > -1 || f.indexOf('ampoule') > -1 || f.indexOf('pen') > -1) {
+            hintText = 'Injectable — give the dose to inject in mg or mL (vial/pen strength: ' + (strength || 'see label') + ').';
+        } else if (f.indexOf('cream') > -1 || f.indexOf('ointment') > -1 || f.indexOf('gel') > -1 || f.indexOf('lotion') > -1) {
+            hintText = 'Topical — describe the amount and how often, e.g. "apply a thin layer twice daily".';
+        } else if (f.indexOf('drop') > -1) {
+            hintText = 'Drops — give the number of drops per dose, e.g. "2 drops".';
+        } else if (f.indexOf('inhaler') > -1) {
+            hintText = 'Inhaler — give the number of puffs per dose, e.g. "2 puffs".';
+        } else if (f.indexOf('patch') > -1) {
+            hintText = 'Patch — say how often it is changed, e.g. "1 patch every 72 hours".';
+        } else if (f.indexOf('sachet') > -1) {
+            hintText = 'Sachet — say how many sachets per dose, dissolved as directed.';
+        } else if (f.indexOf('tablet') > -1 || f.indexOf('capsule') > -1 || f.indexOf('caplet') > -1 || f.indexOf('suppository') > -1) {
+            hintText = 'Give the number of tablets/capsules per dose, e.g. "1 tablet" or "2 capsules".';
+        }
+        if (hintText) { hint.style.display = 'block'; hint.textContent = hintText; }
+        else { hint.style.display = 'none'; }
+
+        if (routeSelect && routeSelect.dataset.userEdited !== 'true') {
+            let suggestedRoute = '';
+            if (f.indexOf('tablet') > -1 || f.indexOf('capsule') > -1 || f.indexOf('syrup') > -1
+                || f.indexOf('suspension') > -1 || f.indexOf('solution') > -1 || f.indexOf('sachet') > -1) {
+                suggestedRoute = 'Oral';
+            } else if (f.indexOf('injection') > -1 || f.indexOf('vial') > -1 || f.indexOf('ampoule') > -1 || f.indexOf('pen') > -1) {
+                suggestedRoute = 'Subcutaneous (SC)';
+            } else if (f.indexOf('cream') > -1 || f.indexOf('ointment') > -1 || f.indexOf('gel') > -1
+                       || f.indexOf('lotion') > -1 || f.indexOf('patch') > -1) {
+                suggestedRoute = 'Topical';
+            } else if (f.indexOf('inhaler') > -1) {
+                suggestedRoute = 'Inhaled';
+            } else if (f.indexOf('drop') > -1 && f.indexOf('eye') > -1) {
+                suggestedRoute = 'Ophthalmic';
+            } else if (f.indexOf('drop') > -1) {
+                suggestedRoute = 'Nasal';
+            } else if (f.indexOf('suppository') > -1) {
+                suggestedRoute = 'Rectal';
+            }
+            if (suggestedRoute) {
+                for (let i = 0; i < routeSelect.options.length; i++) {
+                    if (routeSelect.options[i].value === suggestedRoute) { routeSelect.selectedIndex = i; break; }
+                }
+            }
+        }
+    }
+
+    function addMedicationRow() {
+        rxRowCount++;
+        const rowId = 'rxrow-' + rxRowCount;
+        const medOptions = (ALL_MEDICATIONS || []).map(inv => {
+            const m = inv.medication || {};
+            const form = m.dosageForm || '';
+            const strength = m.strength || '';
+            const unit = inv.unit || '';
+            const stock = inv.quantityInStock;
+            const outOfStock = !!inv.outOfStock;
+            const expired = !!inv.expired;
+            const lowStock = !!inv.lowStock;
+            const label = inv.medicationName + (strength ? ' ' + strength : '') + ' — ' + (form || 'Medication')
+                + ' (stored as ' + (unit || 'units') + ')'
+                + (expired ? ' — EXPIRED (not available)' : (outOfStock ? ' — OUT OF STOCK (not available)' : (lowStock ? ' — low stock' : '')));
+            return '<option value="' + m.id + '"' + ((expired || outOfStock) ? ' disabled' : '') + ' data-form="' + esc(form) + '" data-strength="' + esc(strength)
+                + '" data-unit="' + esc(unit) + '" data-stock="' + stock + '" data-outofstock="' + outOfStock + '">'
+                + esc(label) + '</option>';
+        }).join('');
+
+        const row = document.createElement('div');
+        row.className = 'rx-med-row';
+        row.id = rowId;
+        row.innerHTML =
+            '<button class="rx-med-row-remove" onclick="removeMedicationRow(\'' + rowId + '\')" title="Remove">✕</button>'
+          + '<div class="rx-grid">'
+          + '<div class="rx-field" style="grid-column:1/-1;"><label>Medication *</label>'
+          + '<input type="text" class="rx-med-search" placeholder="🔍 Search medication by name..." autocomplete="off" style="margin-bottom:6px;"/>'
+          + '<select class="rx-medicationId" required><option value="">-- Choose from inventory --</option>' + medOptions + '</select>'
+          + '<div class="rx-med-info" style="display:none;"></div></div>'
+          + '<div class="rx-field"><label>Dosage / Quantity *</label>'
+          + '<input type="text" class="rx-dosage" list="rxdl-' + rowId + '" required placeholder="e.g. 500mg, 5ml, 1 tablet" oninput="this.dataset.userEdited=\'true\'"/>'
+          + '<datalist id="rxdl-' + rowId + '">' + rxDatalist(RX_DOSAGES) + '</datalist>'
+          + '<div class="rx-dosage-hint" style="display:none;"></div></div>'
+          + '<div class="rx-field"><label>Frequency *</label><select class="rx-frequency" required>' + rxSelect(RX_FREQUENCIES, 'Select frequency') + '</select></div>'
+          + '<div class="rx-field"><label>Duration *</label><select class="rx-duration" required>' + rxSelect(RX_DURATIONS, 'Select duration') + '</select></div>'
+          + '<div class="rx-field"><label>Route *</label><select class="rx-route" required onchange="this.dataset.userEdited=\'true\'">' + rxSelect(RX_ROUTES, 'Select route') + '</select></div>'
+          + '<div class="rx-field"><label>Meal Instruction *</label><select class="rx-meal" required>' + rxSelect(RX_MEAL, 'Select instruction') + '</select></div>'
+          + '<div class="rx-timing-row">'
+          + '<label><input type="checkbox" class="rx-morning"> Morning</label>'
+          + '<label><input type="checkbox" class="rx-afternoon"> Afternoon</label>'
+          + '<label><input type="checkbox" class="rx-evening"> Evening</label>'
+          + '<label><input type="checkbox" class="rx-night"> Night</label>'
+          + '</div>'
+          + '<div class="rx-field" style="grid-column:1/-1;"><label>Instructions</label><textarea class="rx-instructions" rows="2" placeholder="Special instructions for patient or pharmacist..."></textarea></div>'
+          + '</div>';
+        document.getElementById('rxMedRowsContainer').appendChild(row);
+
+        const medSelect = row.querySelector('.rx-medicationId');
+        const medSearch = row.querySelector('.rx-med-search');
+        const infoBox = row.querySelector('.rx-med-info');
+        const dosageInput = row.querySelector('.rx-dosage');
+        const hintBox = row.querySelector('.rx-dosage-hint');
+        const routeSelect = row.querySelector('.rx-route');
+        medSelect.addEventListener('change', function () {
+            rxUpdateMedInfo(medSelect, infoBox, dosageInput, hintBox, routeSelect);
+        });
+        medSearch.addEventListener('input', function () {
+            const q = medSearch.value.trim().toLowerCase();
+            Array.from(medSelect.options).forEach(function (opt) {
+                if (!opt.value) return;
+                opt.hidden = !(!q || opt.textContent.toLowerCase().indexOf(q) > -1);
+            });
+            const selectedOpt = medSelect.options[medSelect.selectedIndex];
+            if (selectedOpt && selectedOpt.hidden) {
+                medSelect.selectedIndex = 0;
+                rxUpdateMedInfo(medSelect, infoBox, dosageInput, hintBox, routeSelect);
+            }
+        });
+    }
+
+    function removeMedicationRow(rowId) {
+        const container = document.getElementById('rxMedRowsContainer');
+        if (container.children.length <= 1) { toast('At least one medication is required.', 'warn'); return; }
+        const row = document.getElementById(rowId);
+        if (row) row.remove();
+    }
+
+    async function savePrescriptionModal() {
+        const rows = document.querySelectorAll('#rxMedRowsContainer .rx-med-row');
+        const errorEl = document.getElementById('rxModalError');
+        errorEl.classList.remove('show');
+
+        const medications = [];
+        for (const row of rows) {
+            const medicationId = row.querySelector('.rx-medicationId').value;
+            const dosage = row.querySelector('.rx-dosage').value;
+            const frequency = row.querySelector('.rx-frequency').value;
+            const duration = row.querySelector('.rx-duration').value;
+            const route = row.querySelector('.rx-route').value;
+            const mealInstruction = row.querySelector('.rx-meal').value;
+            if (!medicationId || !dosage || !frequency || !duration || !route || !mealInstruction) {
+                errorEl.textContent = 'Please complete every required field (marked *) for each medication.';
+                errorEl.classList.add('show');
+                return;
+            }
+            medications.push({
+                medicationId, dosage, frequency, duration, route, mealInstruction,
+                morning: row.querySelector('.rx-morning').checked,
+                afternoon: row.querySelector('.rx-afternoon').checked,
+                evening: row.querySelector('.rx-evening').checked,
+                night: row.querySelector('.rx-night').checked,
+                instructions: row.querySelector('.rx-instructions').value.trim()
+            });
+        }
+
+        const saveBtn = document.getElementById('rxModalSaveBtn');
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Saving...';
+
+        try {
+            const res = await fetch('/prescriptions/save-bulk', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({ consultationId: CONSULTATION_ID, medications })
+            });
+
+            if (res.status === 401 || res.status === 403) {
+                errorEl.textContent = res.status === 403
+                    ? 'Access denied saving this prescription. If you have another NMAS account (e.g. the patient) logged in ' +
+                      'in a different tab of THIS SAME browser, that login can silently replace this one — browsers share one ' +
+                      'login per site across tabs unless you use a separate/incognito window. Log back in as the doctor in ' +
+                      'this tab (or open the patient side in a private/incognito window instead) and try again.'
+                    : 'You are not logged in, or your session has expired. Please log in again — your call and this prescription draft will be lost.';
+                errorEl.classList.add('show');
+                return;
+            }
+
+            const rawText = await res.text();
+            let data;
+            try {
+                data = JSON.parse(rawText);
+            } catch (parseErr) {
+                // The server responded with something that isn't JSON (an
+                // unexpected error page, proxy error, etc). Log the raw
+                // body so the actual cause is visible instead of guessing.
+                console.error('Prescription save — non-JSON response (status ' + res.status + '):', rawText);
+                errorEl.textContent = 'Unexpected server response (status ' + res.status + '). Check the browser console for details, or try again.';
+                errorEl.classList.add('show');
+                return;
+            }
+
+            if (data.ok) {
+                toast('✅ Prescription saved to patient record!', 'ok');
+                closePrescriptionModal();
+                document.getElementById('rxMedRowsContainer').innerHTML = '';
+                rxRowCount = 0;
+            } else {
+                errorEl.textContent = data.error || 'Could not save prescription.';
+                errorEl.classList.add('show');
+            }
+        } catch(e) {
+            console.error('Prescription save error:', e);
+            errorEl.textContent = 'Could not reach the server. Check your connection and try again.';
+            errorEl.classList.add('show');
+        } finally {
+            saveBtn.disabled = false;
+            saveBtn.textContent = '💾 Save Prescription';
+        }
+    }
+
+    function sendChat() {
+        const inp = document.getElementById('chatInput');
+        const text = inp.value.trim();
+        if (!text) return;
+        ws.send(JSON.stringify({ chat: text }));
+        renderMsg(text, true);
+        inp.value = '';
+    }
+
+    function renderMsg(text, isMe) {
+        const box = document.getElementById('chatMessages');
+        const div = document.createElement('div');
+        div.className = 'msg' + (isMe ? ' mine' : '');
+        const bubble = document.createElement('div');
+        bubble.className = 'bubble';
+        bubble.textContent = text;
+        const meta = document.createElement('div');
+        meta.className = 'msg-meta';
+        meta.textContent = isMe ? 'You' : 'Patient';
+        div.appendChild(bubble);
+        div.appendChild(meta);
+        box.appendChild(div);
+        box.scrollTop = box.scrollHeight;
+    }
+
+    function toggleMic() {
+        micOn = !micOn;
+        if (localStream) localStream.getAudioTracks().forEach(t => t.enabled = micOn);
+        document.getElementById('micBtn').className = 'ctrl-btn' + (micOn ? ' on' : '');
+        document.getElementById('micBtn').textContent = micOn ? '🎙️' : '🔇';
+    }
+
+    function toggleCam() {
+        camOn = !camOn;
+        if (localStream) localStream.getVideoTracks().forEach(t => t.enabled = camOn);
+        document.getElementById('camBtn').className = 'ctrl-btn' + (camOn ? ' on' : '');
+        document.getElementById('camBtn').textContent = camOn ? '🎥' : '🚫';
+    }
+
+    function endCall() {
+        if (confirm('End this consultation?')) {
+            intentionalClose = true;
+            if (ws) ws.close();
+            if (pc) pc.close();
+            if (localStream) localStream.getTracks().forEach(t => t.stop());
+            fetch('/video/end/' + REQUEST_ID, { method: 'GET' });
+            window.location.href = '/video/incoming';
+        }
+    }
+
+    function showCallEndedOverlay(text) {
+        document.getElementById('callEndedText').textContent = text;
+        document.getElementById('callEndedOverlay').classList.add('show');
+        if (ws) ws.close();
+        if (pc) pc.close();
+        if (localStream) localStream.getTracks().forEach(t => t.stop());
+    }
+
+    function esc(s) {
+        if (!s) return '';
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function toast(msg, type) {
+        const c = document.getElementById('toast-container');
+        const t = document.createElement('div');
+        t.className = 'toast' + (type === 'warn' ? ' warn' : type === 'ok' ? ' ok' : '');
+        t.textContent = msg;
+        c.appendChild(t);
+        setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 250); }, 4500);
+    }
+
+    // Keep the HTTP session alive for as long as this call runs. WebSocket
+    // traffic alone won't do this — without an occasional plain HTTP
+    // request, a long consultation could outlast the session timeout and
+    // any save (prescription, notes) made afterward would fail.
+    setInterval(() => {
+        fetch('/api/session/ping', { credentials: 'same-origin' }).catch(() => {});
+    }, 5 * 60 * 1000); // every 5 minutes
+
+    connect();
+</script>
+</body>
+</html>

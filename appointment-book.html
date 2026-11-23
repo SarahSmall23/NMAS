@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Book Appointment - NMAS</title>
+
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+
+    <style>
+        *{
+            margin:0;
+            padding:0;
+            box-sizing:border-box;
+            font-family:Arial, sans-serif;
+        }
+
+        body{
+            background:#F0FAF5;
+            padding:40px;
+            color:#1A2E1A;
+        }
+
+        .container{
+            max-width:1100px;
+            margin:auto;
+        }
+
+        .top-actions{
+            margin-bottom:20px;
+            display:flex;
+            gap:12px;
+            flex-wrap:wrap;
+        }
+
+        .nav-btn{
+            display:inline-flex;
+            align-items:center;
+            gap:8px;
+            text-decoration:none;
+            background:#059669;
+            color:white;
+            padding:12px 18px;
+            border-radius:10px;
+            font-size:14px;
+            font-weight:600;
+            transition:0.2s;
+        }
+
+        .nav-btn:hover{
+            background:#1C2B2B;
+        }
+
+        .nav-btn.secondary{
+            background:#e2e8f0;
+            color:#1A2E1A;
+        }
+
+        .nav-btn.secondary:hover{
+            background:#cbd5e1;
+        }
+
+        .header{
+            margin-bottom:30px;
+        }
+
+        .header h1{
+            color:#1C2B2B;
+            font-size:34px;
+            margin-bottom:10px;
+        }
+
+        .header p{
+            color:#64748b;
+            font-size:15px;
+        }
+
+        .card{
+            background:white;
+            border-radius:18px;
+            padding:35px;
+            box-shadow:0 8px 30px rgba(0,0,0,0.08);
+        }
+
+        .info-box{
+            background:#ECFDF5;
+            border:1px solid #6EE7B7;
+            color:#065F46;
+            padding:18px;
+            border-radius:14px;
+            margin-bottom:25px;
+            line-height:1.7;
+        }
+
+        .success{
+            background:#dcfce7;
+            color:#166534;
+            padding:14px;
+            border-radius:10px;
+            margin-bottom:20px;
+            border:1px solid #86efac;
+        }
+
+        .section-title{
+            margin-top:30px;
+            margin-bottom:20px;
+            color:#1C2B2B;
+            border-bottom:2px solid #e2e8f0;
+            padding-bottom:8px;
+            font-size:20px;
+        }
+
+        .grid{
+            display:grid;
+            grid-template-columns:repeat(auto-fit,minmax(300px,1fr));
+            gap:20px;
+        }
+
+        .field{
+            display:flex;
+            flex-direction:column;
+        }
+
+        .field label{
+            margin-bottom:8px;
+            font-size:14px;
+            font-weight:600;
+            color:#334155;
+        }
+
+        .field input,
+        .field select,
+        .field textarea{
+            padding:12px;
+            border:1px solid #cbd5e1;
+            border-radius:10px;
+            font-size:14px;
+            background:#fff;
+            transition:0.2s;
+        }
+
+        .field input:focus,
+        .field select:focus,
+        .field textarea:focus{
+            border-color:#059669;
+            outline:none;
+            box-shadow:0 0 0 4px rgba(24,95,165,0.1);
+        }
+
+        textarea{
+            resize:vertical;
+        }
+
+        .btn-area{
+            margin-top:35px;
+            display:flex;
+            gap:15px;
+            flex-wrap:wrap;
+        }
+
+        .btn{
+            padding:14px 22px;
+            border:none;
+            border-radius:10px;
+            cursor:pointer;
+            font-size:15px;
+            font-weight:600;
+            display:flex;
+            align-items:center;
+            gap:8px;
+            transition:0.2s;
+            text-decoration:none;
+        }
+
+        .btn-primary{
+            background:#059669;
+            color:white;
+        }
+
+        .btn-primary:hover{
+            background:#1C2B2B;
+        }
+
+        .btn-secondary{
+            background:#e2e8f0;
+            color:#1A2E1A;
+        }
+
+        .btn-secondary:hover{
+            background:#cbd5e1;
+        }
+
+        .hint-text{
+            font-weight:400;
+            color:#64748b;
+            font-size:12.5px;
+        }
+
+        .doctor-search-row{
+            display:flex;
+            gap:10px;
+            flex-wrap:wrap;
+        }
+
+        .doctor-search-row select{
+            flex:0 0 220px;
+        }
+
+        .doctor-search-row input{
+            flex:1;
+            min-width:220px;
+        }
+
+        .search-results{
+            margin-top:8px;
+            max-height:260px;
+            overflow-y:auto;
+            border:1px solid #e2e8f0;
+            border-radius:12px;
+            background:#fff;
+            box-shadow:0 6px 18px rgba(0,0,0,0.08);
+        }
+
+        .search-result-item{
+            padding:12px 16px;
+            cursor:pointer;
+            border-bottom:1px solid #f1f5f9;
+            transition:0.15s;
+        }
+
+        .search-result-item:last-child{
+            border-bottom:none;
+        }
+
+        .search-result-item:hover{
+            background:#f0fdf4;
+        }
+
+        .search-result-item strong{
+            display:block;
+            color:#1C2B2B;
+            font-size:14px;
+        }
+
+        .search-result-item span{
+            display:block;
+            color:#64748b;
+            font-size:12.5px;
+            margin-top:2px;
+        }
+
+        .search-empty{
+            padding:16px;
+            text-align:center;
+            color:#94a3b8;
+            font-size:13px;
+        }
+
+        .selected-chip{
+            margin-top:8px;
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:10px;
+            background:#ECFDF5;
+            border:1px solid #6EE7B7;
+            color:#065F46;
+            padding:12px 16px;
+            border-radius:12px;
+            font-size:13.5px;
+        }
+
+        .selected-chip strong{
+            display:block;
+            font-size:14px;
+        }
+
+        .selected-chip span{
+            display:block;
+            color:#047857;
+            font-size:12.5px;
+            margin-top:2px;
+        }
+
+        .selected-chip button{
+            border:none;
+            background:#dc2626;
+            color:white;
+            padding:7px 12px;
+            border-radius:8px;
+            font-size:12px;
+            font-weight:600;
+            cursor:pointer;
+            flex-shrink:0;
+        }
+
+        .selected-chip button:hover{
+            background:#b91c1c;
+        }
+
+        .schedule-box{
+            margin-top:8px;
+            padding:12px 16px;
+            border-radius:12px;
+            font-size:13px;
+            line-height:1.6;
+        }
+        .schedule-box.avail{
+            background:#ECFDF5;
+            border:1px solid #6EE7B7;
+            color:#065F46;
+        }
+        .schedule-box.busy{
+            background:#FFF7ED;
+            border:1px solid #FDBA74;
+            color:#9A3412;
+        }
+        .schedule-box.pattern{
+            background:#EFF6FF;
+            border:1px solid #93C5FD;
+            color:#1E40AF;
+        }
+        .schedule-box.none{
+            background:#F8FAFC;
+            border:1px solid #E2E8F0;
+            color:#64748B;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="top-actions">
+
+        <a th:href="@{/redirect-dashboard}" class="nav-btn">
+            <i class="ti ti-layout-dashboard"></i>
+            Back to Dashboard
+        </a>
+
+        <a th:href="@{/appointments}" class="nav-btn secondary" th:unless="${isPatientBooking}">
+            <i class="ti ti-calendar-event"></i>
+            View Appointments
+        </a>
+
+    </div>
+
+    <div class="header">
+
+        <h1>
+            <i class="ti ti-calendar-plus"></i>
+            Book Appointment
+        </h1>
+
+        <p>
+            Schedule a patient appointment with a doctor and healthcare facility.
+        </p>
+
+    </div>
+
+    <div class="card">
+
+        <div class="info-box">
+            <strong>Appointment booking note:</strong>
+            Select an existing patient, assign the relevant doctor and facility,
+            then capture the appointment date and reason.
+            If the selected doctor has availability set up for that date, the system will
+            automatically assign the next available 30-minute slot and set the appointment time.
+        </div>
+
+        <div th:if="${successMessage}" class="success">
+            <i class="ti ti-circle-check"></i>
+            <span th:text="${successMessage}"></span>
+        </div>
+        
+        <div th:if="${errorMessage}" class="success" style="background:#fee2e2;color:#991b1b;border:1px solid #fecaca;">
+            <i class="ti ti-alert-circle"></i>
+            <span th:text="${errorMessage}"></span>
+        </div>
+
+                <div style="background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af;padding:12px 16px;border-radius:10px;font-size:13px;margin-bottom:18px;">
+            <strong>Booking is for follow-up appointments.</strong> If you are walking in today, please go to reception first; they will record your visit and send you to the nurse.
+        </div>
+
+        <form th:action="@{/appointments/book}" th:object="${appointment}" method="post">
+
+            <h2 class="section-title">Appointment Assignment</h2>
+
+            <div class="grid">
+
+                <div class="field" th:if="${isPatientBooking}">
+                    <label>Patient</label>
+                    <div style="padding:12px;border:1px solid #cbd5e1;border-radius:10px;background:#f8fafc;">
+                        <strong th:text="${selfPatient != null ? selfPatient.fullName : 'Your record'}"></strong>
+                        <span th:if="${selfPatient != null}" th:text="' — ID: ' + ${selfPatient.idNumber}"></span>
+                    </div>
+                    <input type="hidden" th:if="${selfPatient != null}" name="patient" th:value="${selfPatient.id}">
+                </div>
+
+                <div class="field" th:unless="${isPatientBooking}">
+                    <label>Patient</label>
+                    <select th:field="*{patient}" required>
+                        <option value="">Select patient</option>
+                        <option th:each="patient : ${patients}"
+                                th:value="${patient.id}"
+                                th:text="${patient.fullName + ' - ' + patient.idNumber}">
+                        </option>
+                    </select>
+                </div>
+
+                <div class="field" style="grid-column:1/-1;">
+                    <label>Facility <span class="hint-text">— search by name, city or province to find one nearby</span></label>
+                    <input type="text" id="facilitySearchInput" autocomplete="off"
+                           placeholder="Search facilities e.g. 'Mbombela' or 'Hospital'"
+                           oninput="nmasFilterFacilities()" onfocus="nmasShowFacilityResults()">
+                    <div id="facilitySelected" class="selected-chip" style="display:none;"></div>
+                    <div id="facilityResults" class="search-results" style="display:none;"></div>
+                    <input type="hidden" name="facility" id="facilityIdInput"
+                           th:value="${appointment.facility != null ? appointment.facility.id : ''}">
+                </div>
+
+                <div class="field" style="grid-column:1/-1;">
+                    <label>Doctor <span class="hint-text">— filter by specialty (e.g. Dermatologist, GP, Neurologist, Cardiologist) and search by name</span></label>
+                    <div class="doctor-search-row">
+                        <select id="specialtyFilter" onchange="nmasFilterDoctors()">
+                            <option value="">All specialties</option>
+                        </select>
+                        <input type="text" id="doctorSearchInput" autocomplete="off"
+                               placeholder="Search doctor by name..."
+                               oninput="nmasFilterDoctors()" onfocus="nmasShowDoctorResults()">
+                    </div>
+                    <div id="facilityFilterNote" class="hint-text" style="display:none;margin-top:6px;"></div>
+                    <div id="doctorSelected" class="selected-chip" style="display:none;"></div>
+                    <div id="doctorScheduleBox" class="schedule-box" style="display:none;"></div>
+                    <div id="doctorResults" class="search-results" style="display:none;"></div>
+                    <input type="hidden" name="doctor" id="doctorIdInput"
+                           th:value="${appointment.doctor != null ? appointment.doctor.id : ''}">
+                </div>
+
+            </div>
+
+            <h2 class="section-title">Appointment Details</h2>
+
+            <div class="grid">
+
+                <div class="field">
+                    <label>Appointment Date</label>
+                    <input type="date" th:field="*{appointmentDate}" th:min="${#temporals.format(#temporals.createNow(), 'yyyy-MM-dd')}" required>
+                </div>
+
+                <div class="field">
+                    <label>Appointment Time</label>
+                    <input type="time" th:field="*{appointmentTime}" required>
+                </div>
+
+            </div>
+
+            <br>
+
+            <div class="field">
+                <label>Reason</label>
+                <textarea th:field="*{reason}" rows="4" required></textarea>
+            </div>
+
+            <br>
+
+            <div class="field">
+                <label>Notes</label>
+                <textarea th:field="*{notes}" rows="3"></textarea>
+            </div>
+
+            <div class="btn-area">
+
+                <button type="submit" class="btn btn-primary">
+                    <i class="ti ti-device-floppy"></i>
+                    Book Appointment
+                </button>
+
+                <a th:href="@{/appointments}" class="btn btn-secondary">
+                    <i class="ti ti-calendar-event"></i>
+                    View Appointments
+                </a>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+<script th:inline="javascript">
+    const NMAS_FACILITIES = /*[[${facilities}]]*/ [];
+    const NMAS_DOCTORS = /*[[${doctors}]]*/ [];
+
+    let selectedFacilityId = document.getElementById('facilityIdInput').value || null;
+    let selectedDoctorId = document.getElementById('doctorIdInput').value || null;
+
+    function nmasEsc(s) {
+        return (s == null ? '' : String(s)).replace(/[&<>"']/g, c => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[c]));
+    }
+
+    // ── Facility search ──────────────────────────────────────────────
+    function nmasShowFacilityResults() { nmasFilterFacilities(); }
+
+    function nmasFilterFacilities() {
+        const q = document.getElementById('facilitySearchInput').value.trim().toLowerCase();
+        const box = document.getElementById('facilityResults');
+        const matches = NMAS_FACILITIES.filter(f => !q ||
+            (f.facilityName || '').toLowerCase().includes(q) ||
+            (f.city || '').toLowerCase().includes(q) ||
+            (f.province || '').toLowerCase().includes(q) ||
+            (f.address || '').toLowerCase().includes(q) ||
+            (f.facilityType || '').toLowerCase().includes(q)
+        );
+
+        if (matches.length === 0) {
+            box.innerHTML = '<div class="search-empty">No facilities match your search.</div>';
+        } else {
+            box.innerHTML = matches.slice(0, 30).map(f =>
+                '<div class="search-result-item" onclick="nmasSelectFacility(' + f.id + ')">'
+                + '<strong>' + nmasEsc(f.facilityName) + '</strong>'
+                + '<span>' + nmasEsc(f.facilityType) + ' &middot; ' + nmasEsc(f.city) + ', ' + nmasEsc(f.province) + '</span>'
+                + '</div>'
+            ).join('');
+        }
+        box.style.display = 'block';
+    }
+
+    function nmasSelectFacility(id) {
+        selectedFacilityId = id;
+        document.getElementById('facilityIdInput').value = id;
+        const f = NMAS_FACILITIES.find(x => x.id === id);
+        const chip = document.getElementById('facilitySelected');
+        if (f) {
+            chip.style.display = 'flex';
+            chip.innerHTML =
+                '<div><strong>' + nmasEsc(f.facilityName) + '</strong>'
+                + '<span>' + nmasEsc(f.facilityType) + ' &middot; ' + nmasEsc(f.address) + ', ' + nmasEsc(f.city) + '</span></div>'
+                + '<button type="button" onclick="nmasClearFacility()">Change</button>';
+        }
+        document.getElementById('facilitySearchInput').value = '';
+        document.getElementById('facilitySearchInput').style.display = 'none';
+        document.getElementById('facilityResults').style.display = 'none';
+        nmasFilterDoctors();
+    }
+
+    function nmasClearFacility() {
+        selectedFacilityId = null;
+        document.getElementById('facilityIdInput').value = '';
+        document.getElementById('facilitySelected').style.display = 'none';
+        document.getElementById('facilitySearchInput').style.display = 'block';
+        nmasFilterDoctors();
+    }
+
+    // ── Doctor search ────────────────────────────────────────────────
+    function nmasPopulateSpecialties() {
+        const sel = document.getElementById('specialtyFilter');
+        // Curated common specialties (always shown, even if not yet staffed
+        // everywhere) plus anything else actually present in the doctor list.
+        const curated = ['General Practitioner', 'Cardiology', 'Neurology', 'Dermatology',
+            'Pediatrics', 'Internal Medicine', 'Emergency Medicine'];
+        const present = Array.from(new Set(NMAS_DOCTORS.map(d => d.specialization).filter(Boolean)));
+        const all = Array.from(new Set([...curated, ...present])).sort();
+        all.forEach(s => {
+            const opt = document.createElement('option');
+            opt.value = s;
+            opt.textContent = s;
+            sel.appendChild(opt);
+        });
+    }
+
+    function nmasShowDoctorResults() { nmasFilterDoctors(); }
+
+    function nmasFilterDoctors() {
+        const q = document.getElementById('doctorSearchInput').value.trim().toLowerCase();
+        const spec = document.getElementById('specialtyFilter').value;
+        const box = document.getElementById('doctorResults');
+        const note = document.getElementById('facilityFilterNote');
+
+        if (selectedFacilityId) {
+            const f = NMAS_FACILITIES.find(x => x.id === selectedFacilityId);
+            note.style.display = 'block';
+            note.textContent = 'Showing doctors at ' + (f ? f.facilityName : 'the selected facility') + '. Change the facility above to see doctors elsewhere.';
+        } else {
+            note.style.display = 'none';
+        }
+
+        const matches = NMAS_DOCTORS.filter(d => {
+            if (selectedFacilityId && (!d.facility || d.facility.id !== selectedFacilityId)) return false;
+            if (spec && d.specialization !== spec) return false;
+            if (q && !(d.fullName || '').toLowerCase().includes(q)) return false;
+            return true;
+        });
+
+        if (matches.length === 0) {
+            box.innerHTML = '<div class="search-empty">No doctors match your search'
+                + (selectedFacilityId ? ' at this facility' : '') + '.</div>';
+        } else {
+            box.innerHTML = matches.slice(0, 30).map(d =>
+                '<div class="search-result-item" onclick="nmasSelectDoctor(' + d.id + ')">'
+                + '<strong>Dr. ' + nmasEsc(d.fullName) + '</strong>'
+                + '<span>' + nmasEsc(d.specialization) + (d.facility ? ' &middot; ' + nmasEsc(d.facility.facilityName) : '') + '</span>'
+                + '</div>'
+            ).join('');
+        }
+        box.style.display = 'block';
+    }
+
+    function nmasSelectDoctor(id) {
+        selectedDoctorId = id;
+        document.getElementById('doctorIdInput').value = id;
+        const d = NMAS_DOCTORS.find(x => x.id === id);
+        const chip = document.getElementById('doctorSelected');
+        if (d) {
+            chip.style.display = 'flex';
+            chip.innerHTML =
+                '<div><strong>Dr. ' + nmasEsc(d.fullName) + '</strong>'
+                + '<span>' + nmasEsc(d.specialization) + (d.facility ? ' &middot; ' + nmasEsc(d.facility.facilityName) : '') + '</span></div>'
+                + '<button type="button" onclick="nmasClearDoctor()">Change</button>';
+
+            // Picking a doctor who works at a facility we haven't chosen yet
+            // fills that in too, so the two stay consistent.
+            if (!selectedFacilityId && d.facility) {
+                nmasSelectFacility(d.facility.id);
+            }
+        }
+        document.getElementById('doctorSearchInput').value = '';
+        document.getElementById('doctorSearchInput').style.display = 'none';
+        document.getElementById('specialtyFilter').style.display = 'none';
+        document.getElementById('doctorResults').style.display = 'none';
+        nmasFetchSchedule();
+    }
+
+    function nmasClearDoctor() {
+        selectedDoctorId = null;
+        document.getElementById('doctorIdInput').value = '';
+        document.getElementById('doctorSelected').style.display = 'none';
+        document.getElementById('doctorSearchInput').style.display = 'block';
+        document.getElementById('specialtyFilter').style.display = 'inline-block';
+        document.getElementById('doctorScheduleBox').style.display = 'none';
+    }
+
+    // Shows whether the selected doctor is actually available on the chosen
+    // date before the patient submits the booking — or, if nothing's been
+    // set for that exact date, their usual working pattern instead, so the
+    // patient isn't booking completely blind.
+    function nmasFetchSchedule() {
+        const box = document.getElementById('doctorScheduleBox');
+        const dateInput = document.getElementById('appointmentDate');
+        if (!selectedDoctorId) { box.style.display = 'none'; return; }
+
+        let url = '/availability/api/schedule?doctorId=' + selectedDoctorId;
+        if (dateInput && dateInput.value) url += '&date=' + dateInput.value;
+
+        fetch(url).then(r => r.ok ? r.json() : Promise.reject()).then(data => {
+            box.style.display = 'block';
+            const fmt = d => d.dayName + ' ' + d.date + ', ' + d.startTime + '–' + d.endTime
+                + ' (' + d.openSlots + ' open, first at ' + d.firstOpenTime + ')';
+            let head = '';
+            if (data.hasExactSchedule) {
+                if (data.availableSlots > 0) {
+                    box.className = 'schedule-box avail';
+                    head = '<i class="ti ti-calendar-check"></i> <strong>Available on ' + data.date + '</strong>: '
+                        + data.startTime + '–' + data.endTime + ' (' + data.availableSlots + ' of ' + data.totalSlots
+                        + ' slots open' + (data.nextAvailableTime ? ', next open at ' + data.nextAvailableTime : '') + ').';
+                } else {
+                    box.className = 'schedule-box busy';
+                    head = '<i class="ti ti-calendar-x"></i> <strong>Fully booked on ' + data.date + '</strong> (shift '
+                        + data.startTime + '–' + data.endTime + ').';
+                }
+            } else if (data.nextAvailable) {
+                box.className = 'schedule-box avail';
+                head = '<i class="ti ti-calendar-check"></i> ' + (dateInput && dateInput.value
+                    ? 'The doctor has no open schedule on ' + dateInput.value + '. ' : '')
+                    + '<strong>Next available:</strong> ' + fmt(data.nextAvailable);
+            } else if (data.hasPattern) {
+                box.className = 'schedule-box pattern';
+                head = '<i class="ti ti-info-circle"></i> No open slots are published right now. This doctor usually works <strong>'
+                    + data.commonDays.slice(0, 3).join(', ') + '</strong>'
+                    + (data.commonTimes ? ', usually <strong>' + data.commonTimes.replace('-', '–') + '</strong>' : '') + '.';
+            } else {
+                box.className = 'schedule-box none';
+                head = '<i class="ti ti-calendar-question"></i> No schedule on file for this doctor yet. You can still book — the facility will confirm a time.';
+            }
+            let more = '';
+            if (data.upcoming && data.upcoming.length) {
+                more = '<div style="margin-top:8px;"><strong>Upcoming availability</strong> (click a day to use it):<ul style="margin:6px 0 0 18px;">'
+                    + data.upcoming.map(d => '<li><a href="#" style="color:inherit;text-decoration:underline;" onclick="nmasPickScheduleDate(\'' + d.date + '\');return false;">'
+                        + fmt(d) + '</a></li>').join('') + '</ul></div>';
+            }
+            box.innerHTML = head + more;
+        }).catch(() => { box.style.display = 'none'; });
+    }
+
+    function nmasPickScheduleDate(date) {
+        const di = document.getElementById('appointmentDate');
+        if (di) { di.value = date; nmasFetchSchedule(); }
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const dateInput = document.getElementById('appointmentDate');
+        if (dateInput) dateInput.addEventListener('change', nmasFetchSchedule);
+    });
+
+    document.addEventListener('click', function (e) {
+        if (!e.target.closest('#facilityResults') && e.target.id !== 'facilitySearchInput') {
+            document.getElementById('facilityResults').style.display = 'none';
+        }
+        if (!e.target.closest('#doctorResults') && e.target.id !== 'doctorSearchInput') {
+            document.getElementById('doctorResults').style.display = 'none';
+        }
+    });
+
+    // Init
+    nmasPopulateSpecialties();
+    if (selectedFacilityId) { selectedFacilityId = Number(selectedFacilityId); nmasSelectFacility(selectedFacilityId); }
+    if (selectedDoctorId) { selectedDoctorId = Number(selectedDoctorId); nmasSelectDoctor(selectedDoctorId); }
+</script>
+
+</body>
+</html>

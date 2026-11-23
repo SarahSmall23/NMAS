@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Video Consultation — Patient | NMAS</title>
+    <link rel="icon" href="data:,">
+    <style>
+        :root {
+            --bg:#0d1117; --surface:#161b22; --surface2:#1c2128; --border:#30363d;
+            --text:#e6edf3; --muted:#7d8590; --accent:#1a8a6b; --accent-light:#23b98e;
+            --accent-bg:rgba(26,138,107,0.12); --danger:#da3633; --warning:#d29922;
+            --radius:10px; --font:'Inter',system-ui,sans-serif;
+        }
+        *{box-sizing:border-box;margin:0;padding:0;}
+        body{font-family:var(--font);background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;font-size:14px;}
+        header{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;}
+        .logo{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:600;}
+        .logo-icon{width:30px;height:30px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;}
+        .hdr-meta{display:flex;align-items:center;gap:12px;font-size:12px;color:var(--muted);}
+        .dot{width:8px;height:8px;border-radius:50%;background:var(--muted);}
+        .dot.green{background:var(--accent-light);box-shadow:0 0 0 3px var(--accent-bg);}
+        .dot.red{background:var(--danger);}
+
+        .room{display:grid;grid-template-columns:1fr 340px;flex:1;overflow:hidden;}
+
+        /* VIDEO */
+        .video-area{background:#000;position:relative;overflow:hidden;}
+        #remote-video{width:100%;height:100%;object-fit:cover;display:block;}
+        #local-video{position:absolute;bottom:80px;right:16px;width:180px;height:120px;object-fit:cover;border-radius:10px;border:2px solid var(--accent);background:#111;z-index:10;transform:scaleX(-1);}
+        .video-overlay{position:absolute;inset:0;z-index:5;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:var(--muted);}
+        .big-avatar{width:80px;height:80px;border-radius:50%;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:28px;}
+        .controls-bar{position:absolute;bottom:0;left:0;right:0;padding:16px 24px;background:linear-gradient(transparent,rgba(0,0,0,0.85));display:flex;align-items:center;justify-content:center;gap:14px;z-index:20;}
+        .ctrl-btn{width:48px;height:48px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.14);color:#fff;transition:all 0.15s;font-size:18px;}
+        .ctrl-btn:hover{background:rgba(255,255,255,0.24);transform:scale(1.06);}
+        .ctrl-btn.on{background:var(--accent);}
+        .ctrl-btn.end{background:var(--danger);width:56px;height:56px;}
+
+        /* SIDE PANEL */
+        .side-panel{background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+
+        /* Doctor status strip */
+        .dr-status{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+        .dr-name{font-weight:600;font-size:13px;}
+        .status-pill{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);}
+
+        /* Prescription read-only */
+        .rx-section{padding:16px;border-bottom:1px solid var(--border);flex:0 0 auto;}
+        .section-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);margin-bottom:8px;}
+        .rx-display{background:var(--surface2);border-left:4px solid var(--accent);border-radius:6px;padding:12px;font-size:13px;color:var(--muted);white-space:pre-wrap;min-height:90px;max-height:160px;overflow-y:auto;line-height:1.6;}
+        .rx-display.has-content{color:var(--text);}
+
+        /* Symptoms sent */
+        .symptoms-sent{padding:12px 16px;border-bottom:1px solid var(--border);background:var(--surface2);font-size:12px;color:var(--muted);}
+        .symptoms-sent strong{color:var(--text);}
+
+        /* Chat */
+        .chat-section{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+        .chat-messages{flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:8px;}
+        .msg{display:flex;flex-direction:column;}
+        .msg.mine{align-items:flex-end;}
+        .bubble{padding:8px 12px;border-radius:8px;font-size:13px;background:var(--surface2);border:1px solid var(--border);color:var(--text);max-width:88%;word-break:break-word;line-height:1.5;}
+        .msg.mine .bubble{background:var(--accent-bg);border-color:rgba(26,138,107,0.3);}
+        .msg-meta{font-size:10px;color:var(--muted);margin-top:3px;padding:0 4px;}
+        .chat-input-row{padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px;}
+        .chat-input-row input{flex:1;padding:9px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);outline:none;font-size:13px;}
+        .chat-input-row input:focus{border-color:var(--accent);}
+        .send-btn{padding:9px 14px;background:var(--accent);color:#fff;border:none;border-radius:var(--radius);cursor:pointer;font-size:13px;font-weight:600;white-space:nowrap;}
+        .send-btn:hover{background:var(--accent-light);}
+
+        #toast-container{position:fixed;top:18px;right:18px;display:flex;flex-direction:column;gap:8px;z-index:9999;}
+        .toast{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:11px 16px;font-size:13px;min-width:220px;box-shadow:0 4px 12px rgba(0,0,0,0.3);transition:opacity 0.2s;}
+        .call-ended-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:99999;display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px;color:#fff;text-align:center;}
+        .call-ended-overlay.show{display:flex;}
+        .call-ended-overlay .icon{font-size:52px;}
+        .call-ended-overlay p{color:var(--muted);font-size:14px;}
+        .toast.warn{border-color:var(--warning);}
+    </style>
+</head>
+<body>
+<div th:replace="~{fragments/tab-identity-guard :: tabGuard}"></div>
+
+<header>
+    <div class="logo">
+        <div class="logo-icon">🏥</div>
+        NMAS Patient Portal — Virtual Consultation
+    </div>
+    <div class="hdr-meta">
+        <div class="dot red" id="drDot"></div>
+        <span id="drStatusText">Connecting to doctor...</span>
+        &nbsp;·&nbsp;
+        <span id="conn-label" style="color:var(--muted);">Connecting...</span>
+        &nbsp;·&nbsp;
+        <span>Room: <strong th:text="${request.roomId}">room</strong></span>
+    </div>
+</header>
+
+<div class="room">
+    <div class="video-area">
+        <div class="video-overlay" id="videoOverlay">
+            <div class="big-avatar">👨‍⚕️</div>
+            <p id="overlayText">Waiting for the doctor to join this room...</p>
+            <button id="retryConnectionBtn" onclick="retryConnection()"
+                    style="display:none;background:#059669;color:white;border:none;padding:10px 18px;
+                           border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
+                <i class="ti ti-refresh"></i> Reconnect
+            </button>
+        </div>
+        <video id="remote-video" autoplay playsinline></video>
+        <video id="local-video" autoplay playsinline muted></video>
+        <div class="controls-bar">
+            <button class="ctrl-btn on" id="micBtn" onclick="toggleMic()" title="Toggle Mic">🎙️</button>
+            <button class="ctrl-btn on" id="camBtn" onclick="toggleCam()" title="Toggle Camera">🎥</button>
+            <button class="ctrl-btn end" onclick="endCall()" title="End Call">☎️</button>
+        </div>
+    </div>
+
+    <div class="side-panel">
+        <div class="dr-status">
+            <span class="dr-name" th:text="${request.doctor != null ? 'Dr. ' + request.doctor.fullName : 'Doctor'}">Doctor</span>
+            <div class="status-pill">
+                <div class="dot red" id="connDot"></div>
+                <span id="connText">Connecting</span>
+            </div>
+        </div>
+
+        <div class="rx-section">
+            <div class="section-lbl">📋 Doctor's Prescription</div>
+            <div class="rx-display" id="rxDisplay">Waiting for doctor to write prescription...</div>
+        </div>
+
+        <div class="symptoms-sent" th:if="${request.notes != null and !#strings.isEmpty(request.notes)}">
+            <strong>Your symptoms:</strong><br>
+            <span th:text="${request.notes}"></span>
+        </div>
+
+        <div class="chat-section">
+            <div class="section-lbl" style="padding:12px 16px 0;">💬 Chat with Doctor</div>
+            <div class="chat-messages" id="chatMessages"></div>
+            <div class="chat-input-row">
+                <input type="text" id="chatInput" placeholder="Type a message..." onkeydown="if(event.key==='Enter')sendChat()"/>
+                <button class="send-btn" onclick="sendChat()">Send</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="toast-container"></div>
+<div class="call-ended-overlay" id="callEndedOverlay">
+    <div class="icon">📴</div>
+    <h3>Call Ended</h3>
+    <p id="callEndedText">Returning to your video consultations...</p>
+</div>
+
+<script th:inline="javascript">
+    const ROOM_ID   = /*[[${request.roomId}]]*/ 'room';
+    const REQUEST_ID = /*[[${request.id}]]*/ 0;
+    const ROLE      = 'patient';
+    const WS_PROTO  = location.protocol === 'https:' ? 'wss' : 'ws';
+    const WS_URL    = `${WS_PROTO}://${location.host}/consultation/${ROOM_ID}/${ROLE}`;
+
+    let ws, localStream, pc;
+    let micOn = true, camOn = true;
+    let pendingIce = [];
+    const iceConfig = {
+        iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' },
+            { urls: 'stun:stun2.l.google.com:19302' },
+            { urls: 'stun:stun.l.google.com:19302' },
+            // STUN alone only works when at least one side has an open/reachable
+            // NAT — two browsers on different networks (different wifi, mobile
+            // data, a corporate firewall, a VPN...) often can't find a direct
+            // path at all, even though signaling (this WebSocket) connects fine.
+            // A TURN relay is the fallback for exactly that case.
+            { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+            { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+            { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
+        ],
+        iceCandidatePoolSize: 4
+    };
+
+    // ── Get camera/mic and connect immediately — the doctor already
+    //    accepted this request before the patient could get here, so the
+    //    call starts as soon as both sides are in the room. The doctor's
+    //    side always initiates the WebRTC offer; the patient just answers. ──
+    let wsReconnectAttempts = 0;
+    let wsReconnectTimer = null;
+    let intentionalClose = false;
+
+    async function connect() {
+        console.log('[AIDEN-VIDEO] connect() called, role=patient, room=' + ROOM_ID);
+        if (!localStream) {
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                document.getElementById('local-video').srcObject = localStream;
+                console.log('[AIDEN-VIDEO] getUserMedia OK — tracks:', localStream.getTracks().map(t => t.kind));
+            } catch(e) {
+                console.error('[AIDEN-VIDEO] getUserMedia FAILED:', e.name, e.message);
+                const reason = e.name === 'NotReadableError'
+                    ? 'Your camera/mic is already in use by another app or browser tab — close it there first, or use a different device. You can still receive the other side\'s video/audio.'
+                    : e.name === 'NotAllowedError'
+                    ? 'Camera/mic access was blocked. Allow access for this site in your browser settings and rejoin.'
+                    : 'Cannot access camera/microphone. Please allow access.';
+                toast(reason, 'warn');
+            }
+        }
+        openSocket();
+    }
+
+    function openSocket() {
+        console.log('[AIDEN-VIDEO] Opening WebSocket to', WS_URL);
+        ws = new WebSocket(WS_URL);
+
+        ws.onopen = () => {
+            console.log('[AIDEN-VIDEO] WebSocket OPEN');
+            wsReconnectAttempts = 0;
+            setConnLabel('Signaling connected');
+        };
+
+        ws.onmessage = async (ev) => {
+            const msg = JSON.parse(ev.data);
+            console.log('[AIDEN-VIDEO] WS message received:', msg);
+
+            // Doctor joined / left the room
+            if (msg.peerStatus === 'doctor') {
+                setDoctorPresence(msg.connected);
+                return;
+            }
+
+            // Prescription update from doctor
+            if (msg.prescription !== undefined) {
+                const box = document.getElementById('rxDisplay');
+                box.textContent = msg.prescription || 'Waiting for doctor to write prescription...';
+                box.className = 'rx-display' + (msg.prescription ? ' has-content' : '');
+                return;
+            }
+
+            // Call ended by either party
+            if (msg.callEnded) {
+                intentionalClose = true;
+                showCallEndedOverlay(msg.endedBy === 'doctor' ? 'The doctor ended the call.' : 'You ended the call.');
+                setTimeout(() => { window.location.href = '/video/my-requests'; }, 2000);
+                return;
+            }
+
+            // Chat message from doctor
+            if (msg.chat) { renderMsg(msg.chat, false); return; }
+
+            // WebRTC signaling
+            await handleSignal(msg);
+        };
+
+        ws.onerror = (e) => { console.error('[AIDEN-VIDEO] WebSocket ERROR', e); toast('Connection hiccup — attempting to recover...', 'warn'); };
+
+        ws.onclose = (e) => {
+            console.warn('[AIDEN-VIDEO] WebSocket CLOSED code=' + e.code + ' reason=' + e.reason + ' wasClean=' + e.wasClean);
+            document.getElementById('connDot').className = 'dot red';
+            document.getElementById('connText').textContent = 'Disconnected';
+            setConnLabel('Signaling disconnected');
+            if (intentionalClose) return;
+            // Auto-reconnect with a short backoff so a brief network drop
+            // doesn't end the whole consultation.
+            wsReconnectAttempts++;
+            const delay = Math.min(1000 * wsReconnectAttempts, 5000);
+            clearTimeout(wsReconnectTimer);
+            wsReconnectTimer = setTimeout(openSocket, delay);
+        };
+    }
+
+    function setConnLabel(text) {
+        const label = document.getElementById('conn-label');
+        if (label) label.textContent = text;
+    }
+
+    function setDoctorPresence(connected) {
+        console.log('[AIDEN-VIDEO] setDoctorPresence(' + connected + ')');
+        document.getElementById('drDot').className = 'dot ' + (connected ? 'green' : 'red');
+        document.getElementById('drStatusText').textContent = connected ? 'Doctor connected' : 'Waiting for doctor...';
+        document.getElementById('connDot').className = 'dot ' + (connected ? 'green' : 'red');
+        document.getElementById('connText').textContent = connected ? 'Connected' : 'Waiting';
+        if (connected) {
+            document.getElementById('overlayText').textContent = 'Connecting video...';
+            document.getElementById('retryConnectionBtn').style.display = 'none';
+            startConnectTimeout();
+        } else {
+            document.getElementById('videoOverlay').style.display = 'flex';
+            document.getElementById('overlayText').textContent = 'Waiting for the doctor to join this room...';
+            document.getElementById('retryConnectionBtn').style.display = 'none';
+            document.getElementById('remote-video').srcObject = null;
+            clearTimeout(connectTimeoutTimer);
+            if (pc) { pc.close(); pc = null; }
+            pendingIce = [];
+        }
+    }
+
+    // The doctor's side initiates the offer, so if video still hasn't
+    // connected a while after both sides are in the room, the cleanest fix
+    // on this side is a full reconnect — closes the stale peer connection
+    // and socket, then rejoins fresh so the doctor's side re-offers cleanly.
+    let connectTimeoutTimer = null;
+    function startConnectTimeout() {
+        clearTimeout(connectTimeoutTimer);
+        connectTimeoutTimer = setTimeout(() => {
+            if (!pc || (pc.iceConnectionState !== 'connected' && pc.iceConnectionState !== 'completed')) {
+                document.getElementById('overlayText').textContent =
+                    'Still trying to connect video — this can happen when both sides are on very restrictive networks (a strict corporate firewall or VPN). Signaling is working; reconnecting may help.';
+                document.getElementById('retryConnectionBtn').style.display = 'inline-block';
+            }
+        }, 15000);
+    }
+
+    function retryConnection() {
+        intentionalClose = true;
+        window.location.reload();
+    }
+
+    let iceRetryTimer = null;
+    function ensurePC() {
+        if (pc) return pc;
+        console.log('[AIDEN-VIDEO] Creating new RTCPeerConnection. localStream present:', !!localStream);
+        pc = new RTCPeerConnection(iceConfig);
+        if (localStream) {
+            localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+        } else {
+            // No camera/mic of our own (permission denied, or — very common when
+            // testing two browsers on the SAME machine — the webcam is already
+            // held by the other browser and can't be opened twice at once).
+            // Requesting receive-only audio/video keeps the call meaningful:
+            // we can still see/hear the other side even though they can't
+            // see/hear us, instead of the whole call carrying no media at all.
+            console.warn('[AIDEN-VIDEO] No localStream when creating PC — requesting receive-only audio/video so the call still carries the peer\'s media.');
+            pc.addTransceiver('audio', { direction: 'recvonly' });
+            pc.addTransceiver('video', { direction: 'recvonly' });
+        }
+        pc.ontrack = (e) => {
+            console.log('[AIDEN-VIDEO] ontrack fired — remote stream received');
+            document.getElementById('remote-video').srcObject = e.streams[0];
+            document.getElementById('videoOverlay').style.display = 'none';
+        };
+        pc.onicecandidate = (e) => {
+            if (e.candidate) { console.log('[AIDEN-VIDEO] Local ICE candidate:', e.candidate.type, e.candidate.protocol); ws.send(JSON.stringify({ ice: e.candidate })); }
+            else console.log('[AIDEN-VIDEO] ICE gathering complete');
+        };
+        // The doctor's side drives ICE restarts on failure; the patient
+        // just needs to reflect connection quality and stay ready to
+        // answer a renegotiated offer, which handleSignal already does.
+        pc.oniceconnectionstatechange = () => {
+            const state = pc.iceConnectionState;
+            console.log('[AIDEN-VIDEO] iceConnectionState =', state);
+            if (state === 'connected' || state === 'completed') {
+                setConnLabel('Video connected');
+                clearTimeout(iceRetryTimer);
+                clearTimeout(connectTimeoutTimer);
+                document.getElementById('retryConnectionBtn').style.display = 'none';
+            } else if (state === 'disconnected' || state === 'failed') {
+                setConnLabel('Reconnecting video...');
+            }
+        };
+        return pc;
+    }
+
+    async function handleSignal(msg) {
+        if (msg.sdp) {
+            console.log('[AIDEN-VIDEO] Received SDP type=' + msg.sdp.type);
+            ensurePC();
+            await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+            if (msg.sdp.type === 'offer') {
+                const answer = await pc.createAnswer();
+                await pc.setLocalDescription(answer);
+                console.log('[AIDEN-VIDEO] Sending answer, localStream tracks=' + (localStream ? localStream.getTracks().length : 0));
+                ws.send(JSON.stringify({ sdp: pc.localDescription }));
+            }
+            while (pendingIce.length) {
+                const c = pendingIce.shift();
+                try { await pc.addIceCandidate(new RTCIceCandidate(c)); } catch(e) { console.error('[AIDEN-VIDEO] addIceCandidate (queued) failed:', e); }
+            }
+        } else if (msg.ice) {
+            if (pc && pc.remoteDescription && pc.remoteDescription.type) {
+                try { await pc.addIceCandidate(new RTCIceCandidate(msg.ice)); } catch(e) { console.error('[AIDEN-VIDEO] addIceCandidate failed:', e); }
+            } else {
+                console.log('[AIDEN-VIDEO] Queuing ICE candidate — no remote description yet');
+                pendingIce.push(msg.ice);
+            }
+        }
+    }
+
+    function toggleMic() {
+        micOn = !micOn;
+        if (localStream) localStream.getAudioTracks().forEach(t => t.enabled = micOn);
+        document.getElementById('micBtn').className = 'ctrl-btn' + (micOn ? ' on' : '');
+        document.getElementById('micBtn').textContent = micOn ? '🎙️' : '🔇';
+    }
+
+    function toggleCam() {
+        camOn = !camOn;
+        if (localStream) localStream.getVideoTracks().forEach(t => t.enabled = camOn);
+        document.getElementById('camBtn').className = 'ctrl-btn' + (camOn ? ' on' : '');
+        document.getElementById('camBtn').textContent = camOn ? '🎥' : '🚫';
+    }
+
+    function endCall() {
+        if (confirm('End this consultation?')) {
+            intentionalClose = true;
+            if (ws) ws.close();
+            if (pc) pc.close();
+            if (localStream) localStream.getTracks().forEach(t => t.stop());
+            fetch('/video/end/' + REQUEST_ID, { method: 'GET' });
+            window.location.href = '/video/my-requests';
+        }
+    }
+
+    function sendChat() {
+        const inp = document.getElementById('chatInput');
+        const text = inp.value.trim();
+        if (!text) return;
+        ws.send(JSON.stringify({ chat: text }));
+        renderMsg(text, true);
+        inp.value = '';
+    }
+
+    function renderMsg(text, isMe) {
+        const box = document.getElementById('chatMessages');
+        const div = document.createElement('div');
+        div.className = 'msg' + (isMe ? ' mine' : '');
+        const bubble = document.createElement('div');
+        bubble.className = 'bubble';
+        bubble.textContent = text;
+        const meta = document.createElement('div');
+        meta.className = 'msg-meta';
+        meta.textContent = isMe ? 'You' : 'Doctor';
+        div.appendChild(bubble);
+        div.appendChild(meta);
+        box.appendChild(div);
+        box.scrollTop = box.scrollHeight;
+    }
+
+    function showCallEndedOverlay(text) {
+        document.getElementById('callEndedText').textContent = text;
+        document.getElementById('callEndedOverlay').classList.add('show');
+        if (ws) ws.close();
+        if (pc) pc.close();
+        if (localStream) localStream.getTracks().forEach(t => t.stop());
+    }
+
+    function toast(msg, type) {
+        const c = document.getElementById('toast-container');
+        const t = document.createElement('div');
+        t.className = 'toast' + (type === 'warn' ? ' warn' : '');
+        t.textContent = msg;
+        c.appendChild(t);
+        setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 250); }, 4000);
+    }
+
+    // Keep the HTTP session alive for the duration of the call (see doctor
+    // template for the full explanation — WebSocket traffic alone doesn't
+    // reset the session timeout).
+    setInterval(() => {
+        fetch('/api/session/ping', { credentials: 'same-origin' }).catch(() => {});
+    }, 5 * 60 * 1000);
+
+    connect();
+</script>
+</body>
+</html>

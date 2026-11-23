@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Access Denied | NMAS</title>
+    <style>
+        body{font-family:system-ui,sans-serif;background:#0d1117;color:#e6edf3;height:100vh;margin:0;display:flex;align-items:center;justify-content:center;}
+        .card{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:40px;max-width:440px;text-align:center;}
+        .icon{font-size:48px;margin-bottom:12px;}
+        h1{font-size:20px;margin:0 0 8px;}
+        p{color:#7d8590;font-size:14px;line-height:1.6;margin:0 0 20px;}
+        .whoami{background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:12px 16px;font-size:13px;margin-bottom:24px;text-align:left;}
+        .whoami span{color:#7d8590;}
+        .whoami strong{color:#e6edf3;}
+        .actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
+        a.btn{display:inline-block;padding:10px 20px;border-radius:8px;text-decoration:none;font-size:14px;font-weight:600;}
+        a.btn-primary{background:#1f6feb;color:#fff;}
+        a.btn-primary:hover{background:#388bfd;}
+        a.btn-secondary{background:transparent;color:#da3633;border:1px solid #da3633;}
+        a.btn-secondary:hover{background:rgba(218,54,51,0.1);}
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="icon">🔒</div>
+        <h1>Access Denied</h1>
+        <p>You don't have permission to view that page with your current account.</p>
+
+        <div class="whoami" th:if="${currentUser != null}">
+            <span>Signed in as:</span> <strong th:text="${currentUser}">user@example.com</strong><br>
+            <span>Account role:</span> <strong th:text="${currentRole}">ROLE</strong>
+        </div>
+
+        <p style="font-size:12.5px;">
+            If you were expecting a different page, make sure you're signed in with the right account below —
+            otherwise contact your facility administrator.
+        </p>
+
+        <div class="actions">
+            <a href="/redirect-dashboard" class="btn btn-primary">Go to my dashboard</a>
+            <a href="/logout" class="btn btn-secondary">Log out</a>
+        </div>
+    </div>
+</body>
+</html>

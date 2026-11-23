@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Medication Inventory - NMAS</title>
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+    <style>
+        *{ margin:0; padding:0; box-sizing:border-box; font-family:Arial,sans-serif; }
+        body{ background:#F0FAF5; color:#1A2E1A; }
+        .layout{ display:flex; min-height:100vh; }
+        .sidebar{ width:280px; background:#1C2B2B; color:white; padding:30px 20px; display:flex; flex-direction:column; flex-shrink:0; }
+        .logo{ margin-bottom:40px; }
+        .logo h1{ font-size:28px; margin-bottom:6px; }
+        .logo p{ color:#cbd5e1; font-size:13px; }
+        .menu{ display:flex; flex-direction:column; gap:12px; }
+        .menu a{ text-decoration:none; color:white; padding:14px 16px; border-radius:12px; display:flex; align-items:center; gap:12px; transition:0.2s; font-size:15px; }
+        .menu a:hover{ background:rgba(255,255,255,0.12); }
+        .menu .active{ background:#059669; }
+        .logout{ margin-top:auto; display:flex; flex-direction:column; gap:10px; }
+        .logout a{ text-decoration:none; color:white; padding:14px 16px; border-radius:12px; display:flex; align-items:center; gap:12px; transition:0.2s; font-size:15px; font-weight:600; }
+        .logout-btn{ background:#dc2626; }
+        .logout-btn:hover{ background:#b91c1c; }
+        .main{ flex:1; padding:35px; overflow-x:auto; }
+        .topbar{ display:flex; justify-content:space-between; align-items:center; margin-bottom:30px; flex-wrap:wrap; gap:15px; }
+        .topbar h2{ font-size:32px; color:#1C2B2B; }
+        .topbar p{ color:#64748b; margin-top:5px; }
+
+        /* STATS */
+        .stats{ display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:18px; margin-bottom:28px; }
+        .stat{ background:white; border-radius:16px; padding:22px; box-shadow:0 6px 20px rgba(0,0,0,0.06); }
+        .stat-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+        .stat-head h3{ font-size:13px; color:#64748b; }
+        .stat-head i{ font-size:28px; color:#059669; }
+        .stat p{ font-size:32px; font-weight:bold; color:#1C2B2B; }
+        .stat-warn .stat-head i{ color:#d97706; }
+        .stat-warn p{ color:#d97706; }
+        .stat-danger .stat-head i{ color:#dc2626; }
+        .stat-danger p{ color:#dc2626; }
+
+        /* ALERTS */
+        .alert-success{ background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; padding:14px 16px; border-radius:10px; font-size:13px; margin-bottom:20px; display:flex; align-items:center; gap:8px; }
+        .alert-error{ background:#fef2f2; border:1px solid #fecaca; color:#dc2626; padding:14px 16px; border-radius:10px; font-size:13px; margin-bottom:20px; display:flex; align-items:center; gap:8px; }
+        .low-stock-banner{ background:#fffbeb; border:1px solid #fcd34d; color:#92400e; padding:14px 16px; border-radius:10px; font-size:13px; margin-bottom:20px; display:flex; align-items:flex-start; gap:10px; }
+        .low-stock-banner i{ font-size:20px; flex-shrink:0; margin-top:1px; }
+        .low-stock-banner ul{ margin:6px 0 0 16px; }
+        .low-stock-banner li{ margin-bottom:3px; }
+
+        /* GRID */
+        .page-grid{ display:grid; grid-template-columns:380px 1fr; gap:24px; align-items:start; }
+        .card{ background:white; border-radius:18px; padding:28px; box-shadow:0 8px 25px rgba(0,0,0,0.06); }
+        .card h3{ font-size:17px; color:#1C2B2B; margin-bottom:20px; display:flex; align-items:center; gap:8px; }
+        .card h3 i{ color:#059669; }
+        .section-label{ font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:#059669; margin:18px 0 12px; padding-bottom:5px; border-bottom:1px solid #d1fae5; }
+        .field{ margin-bottom:14px; }
+        .field-row{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; }
+        label{ display:block; font-size:12px; font-weight:600; margin-bottom:5px; color:#334155; }
+        input, select{ width:100%; padding:11px 13px; border:1px solid #d1fae5; border-radius:10px; font-size:14px; outline:none; transition:border-color 0.2s; }
+        input:focus, select:focus{ border-color:#059669; box-shadow:0 0 0 3px rgba(5,150,105,0.1); }
+        .btn{ display:inline-flex; align-items:center; gap:8px; padding:12px 18px; background:#059669; color:white; border:none; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer; transition:0.2s; width:100%; justify-content:center; }
+        .btn:hover{ background:#047857; }
+
+        /* TABLE */
+        .table-wrap{ overflow-x:auto; }
+        table{ width:100%; border-collapse:collapse; font-size:13px; min-width:800px; }
+        th{ background:#1C2B2B; color:white; padding:13px 14px; text-align:left; font-size:12px; text-transform:uppercase; white-space:nowrap; }
+        td{ padding:12px 14px; border-bottom:1px solid #f1f5f9; vertical-align:middle; }
+        tr:hover td{ background:#f8fff9; }
+
+        /* BADGES */
+        .badge-ok{ display:inline-block; padding:4px 10px; border-radius:20px; font-size:11px; font-weight:600; background:#dcfce7; color:#166534; }
+        .badge-low{ display:inline-block; padding:4px 10px; border-radius:20px; font-size:11px; font-weight:600; background:#fef3c7; color:#92400e; }
+        .badge-exp{ display:inline-block; padding:4px 10px; border-radius:20px; font-size:11px; font-weight:600; background:#ffedd5; color:#9a3412; border:1px solid #fdba74; }
+        .badge-exp-urgent{ display:inline-block; padding:4px 10px; border-radius:20px; font-size:11px; font-weight:700; background:#fecaca; color:#7f1d1d; border:1px solid #f87171; }
+        .badge-expired{ display:inline-block; padding:4px 10px; border-radius:20px; font-size:11px; font-weight:700; background:#7f1d1d; color:white; }
+        tr.row-expired td{ background:#fef2f2; } tr.row-expiring td{ background:#fff7ed; } tr.row-out td{ background:#fff1f2; } tr.row-low td{ background:#fffbeb; }
+        .badge-out{ display:inline-block; padding:4px 10px; border-radius:20px; font-size:11px; font-weight:600; background:#fee2e2; color:#991b1b; }
+
+        /* INLINE FORMS */
+        .action-group{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+        .inline-form{ display:flex; align-items:center; gap:6px; }
+        .inline-form input[type=number]{ width:70px; padding:7px 10px; font-size:13px; }
+        .btn-sm{ display:inline-flex; align-items:center; gap:5px; padding:7px 12px; border:none; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; transition:0.2s; }
+        .btn-restock{ background:#059669; color:white; }
+        .btn-restock:hover{ background:#047857; }
+        .btn-dispense{ background:#1C2B2B; color:white; }
+        .btn-dispense:hover{ background:#0f1a1a; }
+        .btn-del{ background:none; border:none; color:#dc2626; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:4px; padding:6px 10px; border-radius:8px; transition:background 0.2s; }
+        .btn-del:hover{ background:#fee2e2; }
+        .empty{ text-align:center; padding:40px; color:#94a3b8; }
+        .text-muted{ color:#94a3b8; font-size:12px; }
+    
+        /* Fixed-height layout: the green sidebar stays in place (logout always visible); only the white content area scrolls. */
+        html, body { height:100%; overflow:hidden; }
+        .layout { height:100vh; min-height:0; }
+        .sidebar { height:100vh; overflow-y:auto; flex-shrink:0; }
+        .main { height:100vh; overflow-y:auto !important; }
+    </style>
+</head>
+<body>
+<div class="layout">
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+        <div class="logo">
+            <h1>NMAS</h1>
+            <p>National Medical Access System</p>
+        </div>
+        <div class="menu">
+            <a th:href="@{/pharmacist-dashboard}">
+                <i class="ti ti-layout-dashboard"></i> Dashboard
+            </a>
+            <a th:href="@{/dispensary}">
+                <i class="ti ti-prescription"></i> Dispensary Queue
+            </a>
+            <a th:href="@{/prescriptions}">
+                <i class="ti ti-pill"></i> Prescriptions
+            </a>
+            <a th:href="@{/inventory}" class="active">
+                <i class="ti ti-building-warehouse"></i> Inventory
+            </a>
+        </div>
+        <div class="logout">
+            <a th:href="@{/logout}" class="logout-btn">
+                <i class="ti ti-logout"></i> Logout
+            </a>
+        </div>
+    </div>
+
+    <!-- MAIN -->
+    <div class="main">
+
+        <div class="topbar">
+            <div>
+                <h2>Medication Inventory</h2>
+                <p th:if="${facility != null}" th:text="'Pharmacy stock for ' + ${facility.facilityName} + ' — every facility keeps its own inventory.'"></p>
+                <p th:if="${facility == null}">Your account isn't linked to a facility, so there is no stock to show.</p>
+            </div>
+        </div>
+
+        <!-- Flash messages -->
+        <div th:if="${success}" class="alert-success">
+            <i class="ti ti-circle-check"></i>
+            <span th:text="${success}"></span>
+        </div>
+        <div th:if="${error}" class="alert-error">
+            <i class="ti ti-alert-circle"></i>
+            <span th:text="${error}"></span>
+        </div>
+
+        <!-- Low stock banner -->
+        <div th:if="${!#lists.isEmpty(lowStockList)}" class="low-stock-banner">
+            <i class="ti ti-alert-triangle"></i>
+            <div>
+                <strong>Low Stock Alert — </strong>
+                <span th:text="${#lists.size(lowStockList)}"></span> medication(s) at or below reorder level:
+                <ul>
+                    <li th:each="m : ${lowStockList}">
+                        <span th:if="${!m.isPackTracked()}"
+                              th:text="${m.medicationName + ' — ' + m.quantityInStock + ' ' + m.unit + ' remaining (reorder at ' + m.reorderLevel + ')'}"></span>
+                        <span th:if="${m.isPackTracked()}"
+                              th:text="${m.medicationName + ' — ' + m.quantityInStock + ' pack(s) / ' + (m.quantityInStock * m.getEffectivePillsPerPack()) + ' pills remaining (reorder at ' + m.reorderLevel + ' pack(s))'}"></span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- STATS -->
+        <form th:if="${systemAdmin}" th:action="@{/inventory}" method="get" style="margin-bottom:20px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+            <label style="font-weight:700;font-size:13px;"><i class="ti ti-building-hospital"></i> Facility pharmacy:</label>
+            <select name="facilityId" onchange="this.form.submit()" style="padding:9px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;min-width:260px;">
+                <option th:each="f : ${facilities}" th:value="${f.id}" th:text="${f.facilityName}" th:selected="${facility != null and f.id == facility.id}"></option>
+            </select>
+        </form>
+
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-head">
+                    <h3>Total Medications</h3>
+                    <i class="ti ti-building-warehouse"></i>
+                </div>
+                <p th:text="${totalMedications}">0</p>
+            </div>
+            <div class="stat stat-warn">
+                <div class="stat-head">
+                    <h3>Low Stock</h3>
+                    <i class="ti ti-alert-triangle"></i>
+                </div>
+                <p th:text="${lowStockCount}">0</p>
+            </div>
+            <div class="stat stat-danger">
+                <div class="stat-head">
+                    <h3>Out of Stock</h3>
+                    <i class="ti ti-circle-x"></i>
+                </div>
+                <p th:text="${outOfStockCount}">0</p>
+            </div>
+            <div class="stat stat-warn">
+                <div class="stat-head">
+                    <h3>Expiring in 6 months</h3>
+                    <i class="ti ti-hourglass"></i>
+                </div>
+                <p th:text="${expiringCount}">0</p>
+            </div>
+            <div class="stat stat-danger">
+                <div class="stat-head">
+                    <h3>Expired</h3>
+                    <i class="ti ti-calendar-x"></i>
+                </div>
+                <p th:text="${expiredCount}">0</p>
+            </div>
+        </div>
+
+        <div style="margin-bottom:22px;">
+            <a th:href="@{/inventory/report(facilityId=${facility != null ? facility.id : null})}" class="btn" style="text-decoration:none;display:inline-flex;align-items:center;gap:8px;">
+                <i class="ti ti-file-analytics"></i> Stock &amp; expiry reports (PDF / CSV)
+            </a>
+        </div>
+
+        <!-- TWO-COLUMN GRID -->
+        <div class="page-grid">
+
+            <!-- ADD FORM -->
+            <div class="card">
+                <h3><i class="ti ti-plus"></i> Add Medication</h3>
+
+                <form th:action="@{/inventory/add}" method="post">
+                    <input type="hidden" name="facilityId" th:value="${facility != null ? facility.id : ''}"/>
+
+                    <p class="section-label">Medication Details</p>
+
+                    <div class="field">
+                        <label>Medication Name</label>
+                        <input type="text" name="medicationName" placeholder="e.g. Amoxicillin" required>
+                    </div>
+                    <div class="field">
+                        <label>Generic Name <span class="text-muted">(optional)</span></label>
+                        <input type="text" name="genericName" placeholder="e.g. Amoxicillin Trihydrate">
+                    </div>
+                    <div class="field-row">
+                        <div>
+                            <label>Category</label>
+                            <select name="category">
+                                <option value="">— Select —</option>
+                                <option>Antibiotic</option>
+                                <option>Analgesic</option>
+                                <option>Antiretroviral</option>
+                                <option>Antifungal</option>
+                                <option>Antiviral</option>
+                                <option>Antihypertensive</option>
+                                <option>Antidiabetic</option>
+                                <option>Anti-inflammatory</option>
+                                <option>Antiparasitic</option>
+                                <option>Vaccine</option>
+                                <option>Vitamin / Supplement</option>
+                                <option>Other</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>Unit</label>
+                            <select name="unit" id="unitSelect" onchange="togglePackField()" required>
+                                <option value="">— Select —</option>
+                                <option>Packs</option>
+                                <option>Tablets</option>
+                                <option>Capsules</option>
+                                <option>Vials</option>
+                                <option>Ampoules</option>
+                                <option>Tubes</option>
+                                <option>Bottles</option>
+                                <option>Inhalers</option>
+                                <option>Pens</option>
+                                <option>Patches</option>
+                                <option>Sachets</option>
+                                <option>mL</option>
+                                <option>mg</option>
+                                <option>Units</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="field" id="packField" style="display:none;">
+                        <label>Pills Per Pack <span class="text-muted">(how many pills/tablets in one pack)</span></label>
+                        <input type="number" name="pillsPerPack" id="pillsPerPackInput" min="1" placeholder="e.g. 20">
+                    </div>
+
+                    <p class="section-label">Stock Levels</p>
+
+                    <div class="field-row">
+                        <div>
+                            <label id="qtyLabel">Quantity in Stock</label>
+                            <input type="number" name="quantityInStock" min="0" value="0" required>
+                        </div>
+                        <div>
+                            <label id="reorderLabel">Reorder Level</label>
+                            <input type="number" name="reorderLevel" min="1" value="10" required>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label>Supplier <span class="text-muted">(optional)</span></label>
+                        <input type="text" name="supplier" placeholder="e.g. Aspen Pharmacare">
+                    </div>
+                    <div class="field">
+                        <label>Expiry date <span class="text-muted">(of this stock)</span></label>
+                        <input type="date" name="expiryDate">
+                    </div>
+                    <div class="field">
+                        <label>Batch number <span class="text-muted">(optional)</span></label>
+                        <input type="text" name="batchNumber" placeholder="e.g. LOT-2406-A">
+                    </div>
+
+                    <button type="submit" class="btn">
+                        <i class="ti ti-plus"></i> Add to Inventory
+                    </button>
+                </form>
+            </div>
+
+            <!-- INVENTORY TABLE -->
+            <div class="card">
+                <h3><i class="ti ti-list"></i> Stock List</h3>
+
+                <div th:if="${#lists.isEmpty(medications)}" class="empty">
+                    <i class="ti ti-building-warehouse" style="font-size:40px; display:block; margin-bottom:10px;"></i>
+                    No medications in inventory yet.
+                </div>
+
+                <div th:if="${!#lists.isEmpty(medications)}" class="filter-bar" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+                    <input type="text" id="invSearchInput" placeholder="🔍 Search medication by name..."
+                           oninput="nmasFilterInventory()" autocomplete="off"
+                           style="flex:1;min-width:220px;padding:10px 14px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;">
+                    <select id="invStatusFilter" onchange="nmasFilterInventory()"
+                            style="padding:10px 14px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;">
+                        <option value="">All stock levels</option>
+                        <option value="out">Out of stock</option>
+                        <option value="low">Low stock (running out)</option>
+                        <option value="ok">In stock</option>
+                        <option value="expiring">Expiring within 6 months</option>
+                        <option value="expired">Expired</option>
+                    </select>
+                </div>
+
+                <div th:if="${!#lists.isEmpty(medications)}" class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Medication</th>
+                                <th>Category</th>
+                                <th>Stock</th>
+                                <th>Reorder At</th>
+                                <th>Status</th>
+                                <th>Expiry</th>
+                                <th>Supplier</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="invTableBody">
+                            <tr th:each="med : ${medications}" th:classappend="${med.healthStatus == 'EXPIRED'} ? 'row-expired' : (${med.healthStatus == 'OUT'} ? 'row-out' : (${med.healthStatus == 'EXPIRING'} ? 'row-expiring' : (${med.healthStatus == 'LOW'} ? 'row-low' : '')))"
+                                th:attr="data-name=${#strings.toLowerCase(med.medicationName + ' ' + (med.genericName ?: ''))},
+                                         data-status=${med.expired ? 'expired' : (med.outOfStock ? 'out' : (med.expiringSoon ? 'expiring' : (med.lowStock ? 'low' : 'ok')))}">
+                                <td>
+                                    <strong th:text="${med.medicationName}"></strong>
+                                    <div th:if="${med.genericName}" class="text-muted" th:text="${med.genericName}"></div>
+                                    <div th:if="${med.isPackTracked()}" class="text-muted"
+                                         th:text="${med.getEffectivePillsPerPack()} + ' pills per pack'"></div>
+                                </td>
+                                <td th:text="${med.category ?: '—'}"></td>
+                                <td>
+                                    <!-- Pack-tracked medications -->
+                                    <div th:if="${med.isPackTracked()}">
+                                        <strong style="font-size:15px;color:#1C2B2B;"
+                                                th:text="${med.quantityInStock} + ' pack(s)'"></strong>
+                                        <div class="text-muted"
+                                             th:text="'= ' + ${med.quantityInStock * med.getEffectivePillsPerPack()} + ' pills total'"></div>
+                                    </div>
+                                    <!-- Non-pack items (Vials, Inhalers, mL etc.) -->
+                                    <strong th:unless="${med.isPackTracked()}"
+                                            th:text="${med.quantityInStock + ' ' + med.unit}"></strong>
+                                </td>
+                                <td>
+                                    <span th:if="${med.isPackTracked()}"
+                                          th:text="${med.reorderLevel + ' pack(s)'}"></span>
+                                    <span th:unless="${med.isPackTracked()}"
+                                          th:text="${med.reorderLevel + ' ' + med.unit}"></span>
+                                </td>
+                                <td>
+                                    <span th:if="${med.outOfStock}" class="badge-out">Out of Stock</span>
+                                    <span th:if="${med.lowStock}" class="badge-low">Low Stock</span>
+                                    <span th:if="${!med.outOfStock and !med.lowStock}" class="badge-ok">In Stock</span>
+                                    <span th:if="${med.expired}" class="badge-expired">EXPIRED</span>
+                                    <span th:if="${med.expiringVerySoon}" class="badge-exp-urgent">Expires &lt; 3 months</span>
+                                    <span th:if="${med.expiringSoon and !med.expiringVerySoon}" class="badge-exp">Expires &lt; 6 months</span>
+                                </td>
+                                <td>
+                                    <span th:if="${med.expiryDate == null}" style="color:#94a3b8;">Not recorded</span>
+                                    <span th:if="${med.expiryDate != null}" th:text="${#temporals.format(med.expiryDate, 'dd MMM yyyy')}"></span>
+                                    <div th:if="${med.expiryDate != null and med.batchNumber != null}" class="text-muted" th:text="'Batch ' + ${med.batchNumber}"></div>
+                                </td>
+                                <td th:text="${med.supplier ?: '—'}"></td>
+                                <td>
+                                    <div class="action-group">
+                                        <!-- Restock -->
+                                        <form th:action="@{/inventory/restock/{id}(id=${med.id})}" method="post" class="inline-form">
+                                            <input type="number" name="quantity" min="1" value="1"
+                                                   th:title="${med.isPackTracked() ? 'Packs to add' : 'Quantity to add'}">
+                                            <input type="date" name="expiryDate" title="Expiry date of the new batch" style="width:130px;">
+                                            <button type="submit" class="btn-sm btn-restock" title="Add stock">
+                                                <i class="ti ti-plus"></i> Restock<span th:if="${med.isPackTracked()}"> Pack(s)</span>
+                                            </button>
+                                        </form>
+                                        <!-- Dispense -->
+                                        <form th:action="@{/inventory/dispense/{id}(id=${med.id})}" method="post" class="inline-form">
+                                            <input type="number" name="quantity" min="1" value="1"
+                                                   th:title="${med.isPackTracked() ? 'Packs to dispense' : 'Quantity to dispense'}">
+                                            <button type="submit" class="btn-sm btn-dispense" title="Deduct stock">
+                                                <i class="ti ti-arrow-bar-right"></i> Dispense<span th:if="${med.isPackTracked()}"> Pack(s)</span>
+                                            </button>
+                                        </form>
+                                        <!-- Remove -->
+                                        <form th:action="@{/inventory/delete/{id}(id=${med.id})}" method="post"
+                                              onsubmit="return confirm('Remove this medication from inventory?')">
+                                            <button type="submit" class="btn-del">
+                                                <i class="ti ti-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+function togglePackField() {
+    var unit = document.getElementById('unitSelect').value;
+    var packField = document.getElementById('packField');
+    var pillsInput = document.getElementById('pillsPerPackInput');
+    var qtyLabel = document.getElementById('qtyLabel');
+    var reorderLabel = document.getElementById('reorderLabel');
+    var isPacks = (unit === 'Packs');
+    packField.style.display = isPacks ? 'block' : 'none';
+    if (pillsInput) pillsInput.required = isPacks;
+    qtyLabel.textContent = isPacks ? 'Quantity in Stock (packs)' : 'Quantity in Stock';
+    reorderLabel.textContent = isPacks ? 'Reorder Level (packs)' : 'Reorder Level';
+}
+
+/**
+ * Filters the Stock List table client-side by name (search box) and/or
+ * stock status (dropdown) — no page reload, works together with both
+ * filters active at once. Rows carry their own data-name/data-status
+ * attributes rendered server-side, so this is just show/hide.
+ */
+function nmasFilterInventory() {
+    var q = document.getElementById('invSearchInput').value.trim().toLowerCase();
+    var status = document.getElementById('invStatusFilter').value;
+    var rows = document.getElementById('invTableBody').getElementsByTagName('tr');
+    var visibleCount = 0;
+    for (var i = 0; i < rows.length; i++) {
+        var row = rows[i];
+        var name = row.getAttribute('data-name') || '';
+        var rowStatus = row.getAttribute('data-status') || '';
+        var matchesName = !q || name.indexOf(q) > -1;
+        var matchesStatus = !status || rowStatus === status;
+        var show = matchesName && matchesStatus;
+        row.style.display = show ? '' : 'none';
+        if (show) visibleCount++;
+    }
+    var existingNotice = document.getElementById('invFilterEmptyNotice');
+    if (visibleCount === 0) {
+        if (!existingNotice) {
+            var notice = document.createElement('tr');
+            notice.id = 'invFilterEmptyNotice';
+            var td = document.createElement('td');
+            td.colSpan = 8;
+            td.style.textAlign = 'center';
+            td.style.padding = '30px';
+            td.style.color = '#94a3b8';
+            td.textContent = 'No medications match this search/filter.';
+            notice.appendChild(td);
+            document.getElementById('invTableBody').appendChild(notice);
+        }
+    } else if (existingNotice) {
+        existingNotice.remove();
+    }
+}
+</script>
+</body>
+</html>

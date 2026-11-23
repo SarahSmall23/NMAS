@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Upload Medical Document - NMAS</title>
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+    <style>
+        *{ margin:0; padding:0; box-sizing:border-box; font-family:Arial,sans-serif; }
+        body{ background:#F0FAF5; color:#1A2E1A; display:flex; align-items:center; justify-content:center; min-height:100vh; padding:30px; }
+        .card{ background:white; padding:40px; border-radius:18px; box-shadow:0 8px 30px rgba(0,0,0,0.08); width:100%; max-width:560px; }
+        h2{ font-size:24px; color:#1C2B2B; margin-bottom:5px; }
+        .subtitle{ color:#64748b; font-size:14px; margin-bottom:28px; }
+        .form-group{ margin-bottom:18px; }
+        label{ display:block; font-size:14px; font-weight:600; margin-bottom:6px; }
+        input, select, textarea{ width:100%; padding:12px 14px; border:1px solid #d1fae5; border-radius:10px; font-size:14px; outline:none; transition:border-color 0.2s; }
+        input:focus, select:focus, textarea:focus{ border-color:#059669; }
+        textarea{ resize:vertical; min-height:80px; }
+        .file-hint{ color:#64748b; font-size:12px; margin-top:5px; }
+        .btn{ display:inline-flex; align-items:center; gap:8px; padding:13px 20px; background:#059669; color:white; border:none; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer; text-decoration:none; transition:background 0.2s; }
+        .btn:hover{ background:#047857; }
+        .btn-sec{ background:#1C2B2B; }
+        .btn-sec:hover{ background:#334155; }
+        .actions{ display:flex; gap:12px; margin-top:10px; }
+        .error{ background:#fef2f2; border:1px solid #fecaca; color:#dc2626; padding:12px 15px; border-radius:10px; font-size:13px; margin-bottom:18px; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <h2><i class="ti ti-file-upload" style="color:#059669;"></i> Upload Medical Document</h2>
+    <p class="subtitle">Accepted formats: PDF, JPG, PNG, DOCX</p>
+
+    <div th:if="${error}" class="error" th:text="${error}"></div>
+
+    <form th:action="@{/documents/upload}" method="post" enctype="multipart/form-data">
+        <div class="form-group">
+            <label>Patient</label>
+            <select name="patientId" required>
+                <option value="">-- Select Patient --</option>
+                <option th:each="p : ${patients}"
+                        th:value="${p.id}"
+                        th:text="${p.fullName}"
+                        th:selected="${patient != null and patient.id == p.id}"></option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Document Type</label>
+            <select name="documentType" required>
+                <option value="">-- Select Type --</option>
+                <option value="Lab Result">Lab Result</option>
+                <option value="X-Ray / Scan">X-Ray / Scan</option>
+                <option value="Referral Letter">Referral Letter</option>
+                <option value="Discharge Summary">Discharge Summary</option>
+                <option value="Prescription">Prescription</option>
+                <option value="Other">Other</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>File</label>
+            <input type="file" name="file" accept=".pdf,.jpg,.jpeg,.png,.docx" required>
+            <p class="file-hint">Max size: 10 MB. Accepted: PDF, JPG, PNG, DOCX</p>
+        </div>
+        <div class="form-group">
+            <label>Notes (optional)</label>
+            <textarea name="notes" placeholder="Any notes about this document..."></textarea>
+        </div>
+        <div class="actions">
+            <button type="submit" class="btn"><i class="ti ti-upload"></i> Upload</button>
+            <a th:href="@{/redirect-dashboard}" class="btn btn-sec"><i class="ti ti-arrow-left"></i> Cancel</a>
+        </div>
+    </form>
+</div>
+</body>
+</html>

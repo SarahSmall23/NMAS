@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Register Doctor - NMAS</title>
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+    <style>
+        *{ margin:0; padding:0; box-sizing:border-box; font-family:Arial,sans-serif; }
+        body{ background:#F0FAF5; padding:40px; color:#1A2E1A; }
+        .container{ max-width:1200px; margin:auto; }
+
+        .top-actions{ margin-bottom:20px; }
+        .back-btn{ display:inline-flex; align-items:center; gap:8px; text-decoration:none; background:#059669; color:white; padding:12px 18px; border-radius:10px; font-size:14px; font-weight:600; transition:0.2s; }
+        .back-btn:hover{ background:#1C2B2B; }
+
+        .card{ background:white; padding:35px; border-radius:20px; box-shadow:0 8px 30px rgba(0,0,0,0.08); }
+
+        h1{ color:#1C2B2B; margin-bottom:10px; }
+        .subtitle{ color:#64748b; margin-bottom:30px; }
+
+        .alert{ padding:14px 18px; border-radius:10px; margin-bottom:20px; display:flex; align-items:center; gap:10px; }
+        .alert-success{ background:#dcfce7; color:#166534; border:1px solid #86efac; }
+        .alert-error{ background:#fee2e2; color:#991b1b; border:1px solid #fca5a5; }
+
+        .section-title{ color:#1C2B2B; font-size:18px; border-bottom:2px solid #e2e8f0; padding-bottom:8px; margin:30px 0 20px; }
+
+        .form-grid{ display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+        .full{ grid-column:1 / -1; }
+        .field{ display:flex; flex-direction:column; }
+        label{ display:block; margin-bottom:8px; font-weight:600; color:#334155; font-size:14px; }
+        input, select{ width:100%; padding:12px 14px; border:1px solid #cbd5e1; border-radius:10px; font-size:14px; background:#fff; transition:0.2s; }
+        input:focus, select:focus{ border-color:#059669; outline:none; box-shadow:0 0 0 4px rgba(5,150,105,0.1); }
+        .field-error{ color:#dc2626; font-size:13px; margin-top:5px; }
+        .hint{ color:#64748b; font-size:12px; margin-top:5px; }
+
+        .submit-btn{ margin-top:30px; background:#059669; color:white; border:none; padding:14px 22px; border-radius:10px; font-size:15px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:8px; }
+        .submit-btn:hover{ background:#1C2B2B; }
+
+        /* DOCTORS TABLE */
+        .table-card{ background:white; padding:30px 35px; border-radius:20px; box-shadow:0 8px 30px rgba(0,0,0,0.08); margin-top:30px; }
+        .table-card h2{ color:#1C2B2B; font-size:22px; margin-bottom:20px; display:flex; align-items:center; gap:10px; }
+        table{ width:100%; border-collapse:collapse; font-size:13px; }
+        th{ background:#1C2B2B; color:white; padding:13px 16px; text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; white-space:nowrap; }
+        td{ padding:13px 16px; border-bottom:1px solid #f1f5f9; vertical-align:middle; }
+        tr:last-child td{ border-bottom:none; }
+        tr:hover td{ background:#f8fff9; }
+        .doctor-name{ font-weight:600; color:#1C2B2B; }
+        .doctor-qual{ font-size:12px; color:#64748b; margin-top:2px; }
+
+        .badge{ display:inline-block; padding:4px 12px; border-radius:20px; font-size:11px; font-weight:600; }
+        .badge-green{ background:#dcfce7; color:#166534; }
+        .badge-red{ background:#fee2e2; color:#991b1b; }
+
+        .actions{ display:flex; gap:6px; flex-wrap:wrap; }
+        .btn-action{ display:inline-flex; align-items:center; gap:5px; padding:7px 12px; border-radius:8px; font-size:12px; font-weight:600; border:none; cursor:pointer; transition:0.2s; }
+        .btn-amber{ background:#fef3c7; color:#92400e; }
+        .btn-amber:hover{ background:#fde68a; }
+        .btn-green{ background:#dcfce7; color:#166534; }
+        .btn-green:hover{ background:#bbf7d0; }
+        .btn-red{ background:#fee2e2; color:#991b1b; }
+        .btn-red:hover{ background:#fecaca; }
+
+        .empty{ text-align:center; padding:40px; color:#94a3b8; }
+        .empty i{ font-size:40px; display:block; margin-bottom:10px; }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <div class="top-actions">
+        <a th:href="@{/redirect-dashboard}" class="back-btn">
+            <i class="ti ti-layout-dashboard"></i>
+            Back to Dashboard
+        </a>
+    </div>
+
+    <!-- REGISTRATION FORM -->
+    <div class="card">
+        <h1><i class="ti ti-user-heart"></i> Register Doctor</h1>
+        <p class="subtitle">Add a doctor to the National Medical Access System.</p>
+
+        <div th:if="${successMessage}" class="alert alert-success">
+            <i class="ti ti-circle-check"></i>
+            <span th:text="${successMessage}"></span>
+        </div>
+
+        <form th:action="@{/doctors/register}" th:object="${doctorForm}" method="post">
+
+            <h2 class="section-title">Personal Details</h2>
+            <div class="form-grid">
+                <div class="field full">
+                    <label>Full Name</label>
+                    <input type="text" th:field="*{fullName}" placeholder="Dr. John Dlamini" required>
+                    <p class="field-error" th:if="${#fields.hasErrors('fullName')}" th:errors="*{fullName}"></p>
+                </div>
+                <div class="field">
+                    <label>Gender</label>
+                    <select th:field="*{gender}" required>
+                        <option value="">Select gender</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                    </select>
+                    <p class="field-error" th:if="${#fields.hasErrors('gender')}" th:errors="*{gender}"></p>
+                </div>
+                <div class="field">
+                    <label>Email Address</label>
+                    <input type="email" th:field="*{email}" placeholder="doctor@hospital.co.za" required>
+                    <p class="field-error" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></p>
+                </div>
+                <div class="field">
+                    <label>Phone Number</label>
+                    <input type="text" th:field="*{phoneNumber}" placeholder="0XX XXX XXXX" required>
+                    <p class="field-error" th:if="${#fields.hasErrors('phoneNumber')}" th:errors="*{phoneNumber}"></p>
+                </div>
+                <div class="field">
+                    <label>Alternative Phone Number</label>
+                    <input type="text" th:field="*{alternativePhoneNumber}" placeholder="Optional">
+                </div>
+            </div>
+
+            <h2 class="section-title">Professional Details</h2>
+            <div class="form-grid">
+                <div class="field">
+                    <label>HPCSA Registration Number</label>
+                    <input type="text" th:field="*{hpcsaNumber}" placeholder="e.g. MP0123456" required>
+                    <span class="hint">Health Professions Council of South Africa registration number.</span>
+                    <p class="field-error" th:if="${#fields.hasErrors('hpcsaNumber')}" th:errors="*{hpcsaNumber}"></p>
+                </div>
+                <div class="field">
+                    <label>Qualification / Degree</label>
+                    <input type="text" th:field="*{qualification}" placeholder="e.g. MBChB, MD, MMed" required>
+                    <p class="field-error" th:if="${#fields.hasErrors('qualification')}" th:errors="*{qualification}"></p>
+                </div>
+                <div class="field">
+                    <label>Specialization</label>
+                    <input type="text" th:field="*{specialization}" placeholder="e.g. Cardiology, General Practitioner" required>
+                    <p class="field-error" th:if="${#fields.hasErrors('specialization')}" th:errors="*{specialization}"></p>
+                </div>
+                <div class="field" th:if="${scopedToFacility == null}">
+                    <label>Assigned Facility</label>
+                    <select th:field="*{facilityId}">
+                        <option value="">Select facility (optional)</option>
+                        <option th:each="f : ${facilities}"
+                                th:value="${f.id}"
+                                th:text="${f.facilityName} + ' — ' + ${f.city}"></option>
+                    </select>
+                </div>
+                <div class="field" th:if="${scopedToFacility != null}">
+                    <label>Assigned Facility</label>
+                    <div style="padding:10px 14px;border:1px solid #cbd5e1;border-radius:8px;background:#f8fafc;font-size:14px;">
+                        <i class="ti ti-building-hospital"></i>
+                        <span th:text="${scopedToFacility.facilityName} + ' (' + ${scopedToFacility.city} + ')'"></span>
+                        <span class="text-muted"> — doctors you register are always assigned here.</span>
+                    </div>
+                </div>
+            </div>
+
+            <h2 class="section-title">Login Account</h2>
+            <div class="form-grid">
+                <div class="field full">
+                    <label>Login Password</label>
+                    <input type="password" th:field="*{password}" placeholder="Minimum 6 characters" required>
+                    <span class="hint">The doctor will use their email address and this password to log in.</span>
+                    <p class="field-error" th:if="${#fields.hasErrors('password')}" th:errors="*{password}"></p>
+                </div>
+            </div>
+
+            <button type="submit" class="submit-btn">
+                <i class="ti ti-device-floppy"></i> Register Doctor
+            </button>
+        </form>
+    </div>
+
+    <!-- REGISTERED DOCTORS TABLE -->
+    <div class="table-card">
+        <h2><i class="ti ti-users" style="color:#059669;"></i> Registered Doctors</h2>
+
+        <div th:if="${#lists.isEmpty(doctors)}" class="empty">
+            <i class="ti ti-user-heart"></i>
+            No doctors registered yet.
+        </div>
+
+        <table th:if="${!#lists.isEmpty(doctors)}">
+            <thead>
+                <tr>
+                    <th>Full Name</th>
+                    <th>Email</th>
+                    <th>HPCSA #</th>
+                    <th>Specialization</th>
+                    <th>Facility</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="doc : ${doctors}">
+                    <td>
+                        <div class="doctor-name" th:text="${doc.fullName}"></div>
+                        <div class="doctor-qual" th:text="${doc.qualification}"></div>
+                    </td>
+                    <td th:text="${doc.email}"></td>
+                    <td th:text="${doc.hpcsaNumber}"></td>
+                    <td th:text="${doc.specialization}"></td>
+                    <td th:text="${doc.facility != null ? doc.facility.facilityName : '—'}"></td>
+                    <td>
+                        <span th:if="${suspendedMap[doc.id]}" class="badge badge-red">Suspended</span>
+                        <span th:unless="${suspendedMap[doc.id]}" class="badge badge-green">Active</span>
+                    </td>
+                    <td>
+                        <div class="actions">
+                            <!-- Suspend (only when active) -->
+                            <form th:unless="${suspendedMap[doc.id]}"
+                                  th:action="@{/doctors/suspend/{id}(id=${doc.id})}"
+                                  method="post">
+                                <button type="submit" class="btn-action btn-amber">
+                                    <i class="ti ti-user-pause"></i> Suspend
+                                </button>
+                            </form>
+                            <!-- Reactivate (only when suspended) -->
+                            <form th:if="${suspendedMap[doc.id]}"
+                                  th:action="@{/doctors/unsuspend/{id}(id=${doc.id})}"
+                                  method="post">
+                                <button type="submit" class="btn-action btn-green">
+                                    <i class="ti ti-user-check"></i> Reactivate
+                                </button>
+                            </form>
+                            <!-- Remove -->
+                            <form th:action="@{/doctors/delete/{id}(id=${doc.id})}"
+                                  method="post"
+                                  onsubmit="return confirm('Remove this doctor? This cannot be undone.')">
+                                <button type="submit" class="btn-action btn-red">
+                                    <i class="ti ti-trash"></i> Remove
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+</div>
+</body>
+</html>

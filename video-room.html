@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Video Consultation Room - NMAS</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg: #0d1117; --surface: #161b22; --surface2: #1c2128;
+            --border: #30363d; --text: #e6edf3; --muted: #7d8590;
+            --green: #059669; --green-light: #23b98e; --green-bg: rgba(5,150,105,0.12);
+            --blue: #1f6feb; --danger: #da3633; --radius: 10px;
+        }
+        body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; font-size: 14px; }
+
+        /* HEADER */
+        .room-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 24px; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+        .room-header .logo { display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 600; }
+        .logo-icon { width: 32px; height: 32px; background: var(--green); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+        .status-bar { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+        .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+        .dot.online { background: var(--green-light); box-shadow: 0 0 0 2px var(--green-bg); }
+        .room-id-badge { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 6px 14px; font-size: 12px; color: var(--muted); }
+        .room-id-badge span { color: var(--green-light); font-weight: 600; }
+
+        /* MAIN LAYOUT */
+        .consult-room { display: grid; grid-template-columns: 1fr 360px; flex: 1; overflow: hidden; }
+
+        /* VIDEO AREA */
+        .video-area { background: #000; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        #remote-video { width: 100%; height: 100%; object-fit: cover; }
+        #local-video { position: absolute; bottom: 80px; right: 20px; width: 200px; height: 140px; object-fit: cover; border-radius: 10px; border: 2px solid var(--green); background: #111; z-index: 10; transform: scaleX(-1); }
+        .video-placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: var(--muted); position: absolute; inset: 0; z-index: 5; background: #000; }
+        .video-placeholder .big-avatar { width: 80px; height: 80px; border-radius: 50%; background: var(--surface2); display: flex; align-items: center; justify-content: center; font-size: 30px; color: var(--muted); }
+
+        /* CONTROLS */
+        .controls-bar { position: absolute; bottom: 0; left: 0; right: 0; padding: 18px; background: linear-gradient(transparent, rgba(0,0,0,0.85)); display: flex; align-items: center; justify-content: center; gap: 12px; z-index: 20; }
+        .ctrl-btn { width: 48px; height: 48px; border-radius: 50%; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.12); color: #fff; transition: all 0.15s; }
+        .ctrl-btn:hover { background: rgba(255,255,255,0.22); transform: scale(1.05); }
+        .ctrl-btn.active { background: var(--green); }
+        .ctrl-btn.end-call { background: var(--danger); width: 54px; height: 54px; }
+        .ctrl-btn svg { pointer-events: none; }
+
+        /* INCOMING OVERLAY (Doctor only) */
+        #incomingCallOverlay { display: none; position: absolute; inset: 0; background: rgba(13,17,23,0.96); z-index: 100; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 40px; text-align: center; }
+        .incoming-card { background: var(--surface); border: 1px solid var(--border); padding: 24px; border-radius: 12px; width: 100%; max-width: 420px; text-align: left; margin: 12px 0; }
+        @keyframes pulse-ring { 0%,100% { transform: scale(1); } 50% { transform: scale(1.15); } }
+        .ring-icon { font-size: 44px; animation: pulse-ring 1.5s infinite; }
+        .overlay-actions { display: flex; gap: 12px; width: 100%; max-width: 420px; }
+        .btn-answer { flex: 1; padding: 12px; border: none; border-radius: var(--radius); background: var(--green); color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; }
+        .btn-decline { flex: 1; padding: 12px; border: none; border-radius: var(--radius); background: var(--danger); color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; }
+
+        /* SIDE PANEL */
+        .side-panel { background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+        .side-header { padding: 16px 18px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+        .section-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.7px; color: var(--muted); margin-bottom: 8px; }
+
+        /* Availability toggle (Doctor only) */
+        .duty-row { display: flex; align-items: center; justify-content: space-between; background: var(--surface2); padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border); }
+        .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; inset: 0; background: var(--border); transition: .3s; border-radius: 24px; }
+        .slider::before { position: absolute; content: ""; height: 16px; width: 16px; left: 4px; bottom: 4px; background: white; transition: .3s; border-radius: 50%; }
+        input:checked + .slider { background: var(--green); }
+        input:checked + .slider::before { transform: translateX(20px); }
+
+        /* Prescription */
+        .prescription-section { border-bottom: 1px solid var(--border); display: flex; flex-direction: column; padding: 14px 18px; height: 45%; flex-shrink: 0; }
+        .prescription-textarea { flex: 1; background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 12px; font-size: 13px; resize: none; outline: none; font-family: inherit; line-height: 1.5; }
+        .prescription-textarea:focus { border-color: var(--green); }
+        .prescription-display { flex: 1; background: var(--surface2); border-left: 4px solid var(--green); border-radius: 6px; padding: 14px; font-size: 13px; color: var(--muted); white-space: pre-wrap; overflow-y: auto; }
+        .sync-note { font-size: 11px; color: var(--muted); margin-top: 6px; }
+
+        /* Chat */
+        .chat-section { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .chat-messages { flex: 1; overflow-y: auto; padding: 12px 18px; display: flex; flex-direction: column; gap: 8px; }
+        .chat-msg { max-width: 100%; display: flex; flex-direction: column; }
+        .chat-msg.mine { align-items: flex-end; }
+        .chat-msg .bubble { padding: 8px 12px; border-radius: 8px; font-size: 13px; background: var(--surface2); border: 1px solid var(--border); color: var(--text); display: inline-block; max-width: 85%; word-break: break-word; }
+        .chat-msg.mine .bubble { background: var(--green-bg); border-color: rgba(5,150,105,0.3); }
+        .chat-input-row { padding: 10px 18px; border-top: 1px solid var(--border); display: flex; gap: 8px; flex-shrink: 0; }
+        #chat-input { flex: 1; padding: 9px 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); outline: none; font-size: 13px; }
+        #chat-input:focus { border-color: var(--green); }
+        .send-chat-btn { padding: 9px 16px; border: none; border-radius: var(--radius); background: var(--green); color: white; cursor: pointer; font-size: 13px; font-weight: 600; }
+        .send-chat-btn:hover { background: var(--green-light); }
+
+        /* Toast */
+        #toast-container { position: fixed; top: 20px; right: 20px; display: flex; flex-direction: column; gap: 8px; z-index: 9999; }
+        .toast { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; font-size: 13px; min-width: 240px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transition: all 0.2s; }
+        .toast.info { border-color: var(--blue); }
+        .toast.warning { border-color: #d29922; }
+
+        /* Patient lobby */
+        #patient-lobby { display: none; position: absolute; inset: 0; background: #000; z-index: 30; flex-direction: column; align-items: center; justify-content: center; gap: 20px; padding: 40px; }
+        #patient-lobby.active { display: flex; }
+        .lobby-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 32px; width: 100%; max-width: 480px; }
+        .lobby-card h2 { font-size: 20px; font-weight: 600; margin-bottom: 6px; }
+        .lobby-card .sub { color: var(--muted); margin-bottom: 22px; font-size: 13px; }
+        .doctor-status-row { display: flex; align-items: center; justify-content: space-between; background: var(--surface2); border: 1px solid var(--border); padding: 12px 16px; border-radius: 8px; margin-bottom: 20px; }
+        .symptoms-label { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+        .symptoms-textarea { width: 100%; min-height: 100px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); padding: 12px; resize: vertical; outline: none; font-size: 13px; line-height: 1.6; }
+        .symptoms-textarea:focus { border-color: var(--green); }
+        .call-btn { width: 100%; padding: 12px; border: none; border-radius: var(--radius); background: var(--green); color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 14px; }
+        .call-btn:hover:not(:disabled) { background: var(--green-light); }
+        .call-btn:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; }
+    </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="room-header">
+    <div class="logo">
+        <div class="logo-icon"><i class="ti ti-video" style="color:white;font-size:18px;"></i></div>
+        NMAS Video Consultation
+    </div>
+    <div class="room-id-badge">Room: <span th:text="${request.roomId}">—</span></div>
+    <div class="status-bar"><div class="dot online"></div><span id="conn-label">Connecting...</span></div>
+</div>
+
+<!-- MAIN ROOM -->
+<div class="consult-room">
+
+    <!-- VIDEO AREA -->
+    <div class="video-area">
+
+        <!-- Patient pre-call lobby (shown only to patient role) -->
+        <div id="patient-lobby" th:if="${#strings.equals(currentUserRole, 'PATIENT')}">
+            <div class="lobby-card">
+                <h2>Consultation Lobby</h2>
+                <p class="sub">Confirm doctor availability before requesting a call</p>
+                <div class="doctor-status-row">
+                    <span style="font-size:13px;color:var(--muted)">Doctor Status:</span>
+                    <div style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;">
+                        <div id="badgeDot" class="dot" style="background:var(--danger);"></div>
+                        <span id="badgeText" style="color:var(--muted);">Offline</span>
+                    </div>
+                </div>
+                <div class="symptoms-label">Describe Your Symptoms</div>
+                <textarea class="symptoms-textarea" id="symptoms-input" placeholder="List your symptoms, their duration, severity..."></textarea>
+                <button class="call-btn" id="callRequestBtn" disabled onclick="initiateCall()">Place Consultation Request</button>
+            </div>
+        </div>
+
+        <!-- Incoming call overlay (Doctor only) -->
+        <div id="incomingCallOverlay" th:if="${#strings.equals(currentUserRole, 'DOCTOR')}">
+            <div class="ring-icon">🔔</div>
+            <h2 style="font-weight:600;">Incoming Video Consultation</h2>
+            <div class="incoming-card">
+                <div class="section-label" style="color:var(--green-light);margin-bottom:6px;">Patient Symptoms:</div>
+                <p id="incomingSymptomsText" style="font-size:13px;line-height:1.6;max-height:140px;overflow-y:auto;white-space:pre-wrap;">No details provided.</p>
+            </div>
+            <div class="overlay-actions">
+                <button class="btn-answer" onclick="acceptCall()">✔ Answer</button>
+                <button class="btn-decline" onclick="rejectCall()">✘ Decline</button>
+            </div>
+        </div>
+
+        <!-- Video placeholder -->
+        <div class="video-placeholder" id="video-placeholder">
+            <div class="big-avatar"><i class="ti ti-user" style="font-size:32px;"></i></div>
+            <p id="placeholder-text">Initialising room...</p>
+        </div>
+
+        <video id="remote-video" autoplay playsinline></video>
+        <video id="local-video" autoplay playsinline muted></video>
+
+        <div class="controls-bar">
+            <!-- Mic -->
+            <button class="ctrl-btn active" id="mic-btn" onclick="toggleMic()" title="Toggle microphone">
+                <svg id="mic-icon" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                    <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+                </svg>
+            </button>
+            <!-- Camera -->
+            <button class="ctrl-btn active" id="cam-btn" onclick="toggleCam()" title="Toggle camera">
+                <svg id="cam-icon" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                    <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/>
+                </svg>
+            </button>
+            <!-- End call -->
+            <a th:href="@{/video/end/{id}(id=${request.id})}" class="ctrl-btn end-call" title="End session"
+               onclick="return confirm('End this consultation?')">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                    <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/>
+                    <line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" stroke-width="2"/>
+                </svg>
+            </a>
+        </div>
+    </div>
+
+    <!-- SIDE PANEL -->
+    <div class="side-panel">
+        <div class="side-header">
+            <!-- Doctor: availability toggle -->
+            <div th:if="${#strings.equals(currentUserRole, 'DOCTOR')}">
+                <div class="section-label">Availability</div>
+                <div class="duty-row">
+                    <span id="statusLabel" style="font-size:13px;color:var(--muted);font-weight:500;">Off Duty</span>
+                    <label class="switch">
+                        <input type="checkbox" id="availabilityToggle" onchange="toggleDuty()"/>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+            <!-- Patient: session info -->
+            <div th:if="${#strings.equals(currentUserRole, 'PATIENT')}">
+                <div class="section-label">Session</div>
+                <div style="font-size:13px;color:var(--muted);" th:text="'Dr. ' + ${request.doctor?.fullName}">Doctor</div>
+            </div>
+        </div>
+
+        <!-- Prescription area -->
+        <div class="prescription-section">
+            <div class="section-label">📋 Prescription / Notes</div>
+            <!-- Doctor writes -->
+            <textarea id="prescriptionInput" class="prescription-textarea"
+                      th:if="${#strings.equals(currentUserRole, 'DOCTOR')}"
+                      placeholder="Type prescription or clinical notes — syncs live to patient..."
+                      oninput="syncPrescription()"></textarea>
+            <!-- Patient reads -->
+            <div id="prescriptionDisplay" class="prescription-display"
+                 th:if="${#strings.equals(currentUserRole, 'PATIENT')}">Waiting for doctor's notes...</div>
+            <div class="sync-note" th:if="${#strings.equals(currentUserRole, 'DOCTOR')}">⚡ Keystroke sync — patient sees this in real time</div>
+        </div>
+
+        <!-- Chat -->
+        <div class="chat-section">
+            <div class="section-label" style="padding:10px 18px 0;">💬 Secure Chat</div>
+            <div class="chat-messages" id="chat-messages"></div>
+            <div class="chat-input-row">
+                <input type="text" id="chat-input" placeholder="Type message..." onkeydown="if(event.key==='Enter') sendChat()"/>
+                <button class="send-chat-btn" onclick="sendChat()">Send</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="toast-container"></div>
+
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    const ROOM_ID   = /*[[${request.roomId}]]*/ 'room101';
+    const MY_ROLE   = /*[[${currentUserRole}]]*/ 'PATIENT';
+    const WS_ROLE   = MY_ROLE === 'DOCTOR' ? 'doctor' : 'patient';
+    // STUN finds the public address; TURN relays media when a direct path is
+    // impossible (mobile data CGNAT, hospital firewalls, VPNs). Mirrors the
+    // doctor page so both sides can fall back to the relay.
+    const ICE_CFG   = {
+        iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' },
+            { urls: 'stun:stun2.l.google.com:19302' },
+            { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+            { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+            { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
+        ],
+        iceCandidatePoolSize: 4
+    };
+
+    let localStream, peerConnection, ws;
+    let micOn = true, camOn = true;
+    let wsReady = false;
+
+    /* ── Toast ── */
+    function toast(msg, type = 'info') {
+        const c = document.getElementById('toast-container');
+        const t = document.createElement('div');
+        t.className = 'toast ' + type;
+        t.textContent = msg;
+        c.appendChild(t);
+        setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 200); }, 4000);
+    }
+
+    /* ── WebSocket connection ── */
+    function openWS() {
+        const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+        const url = `${proto}://${location.host}/consultation/${ROOM_ID}/${WS_ROLE}`;
+        ws = new WebSocket(url);
+
+        ws.onopen = () => {
+            wsReady = true;
+            document.getElementById('conn-label').textContent = 'Connected';
+            if (MY_ROLE === 'DOCTOR') {
+                // Doctor enters room immediately and gets camera
+                initDoctorMedia();
+            } else {
+                // Patient goes to lobby, and we get camera/mic ready in the
+                // background now so it's already available the moment the
+                // doctor accepts the call — avoids a race between the
+                // doctor's offer arriving and the patient's media/peer
+                // connection still being set up.
+                const lobby = document.getElementById('patient-lobby');
+                if (lobby) lobby.classList.add('active');
+                document.getElementById('placeholder-text').textContent = 'Waiting in lobby...';
+                startLocalMedia();
+            }
+        };
+
+        ws.onmessage = async (event) => {
+            const msg = JSON.parse(event.data);
+
+            // Peer connection status
+            if (msg.peerStatus !== undefined) {
+                if (MY_ROLE === 'PATIENT' && msg.peerStatus === 'doctor') {
+                    const avail = msg.connected;
+                    document.getElementById('badgeDot').style.background = avail ? 'var(--green-light)' : 'var(--danger)';
+                    document.getElementById('badgeText').textContent = avail ? 'Available' : 'Offline';
+                    document.getElementById('badgeText').style.color = avail ? 'var(--text)' : 'var(--muted)';
+                    document.getElementById('callRequestBtn').disabled = !avail;
+                    if (avail) toast('Your doctor is now available.', 'info');
+                }
+                return;
+            }
+
+            // Doctor status broadcast
+            if (msg.type === 'doctor_status') {
+                if (MY_ROLE === 'PATIENT') {
+                    const avail = msg.available;
+                    document.getElementById('badgeDot').style.background = avail ? 'var(--green-light)' : 'var(--danger)';
+                    document.getElementById('badgeText').textContent = avail ? 'Available' : 'Offline';
+                    document.getElementById('callRequestBtn').disabled = !avail;
+                    if (avail) toast('Doctor is now available.', 'info');
+                }
+                return;
+            }
+
+            // Incoming call request (Doctor)
+            if (msg.type === 'call_request' && MY_ROLE === 'DOCTOR') {
+                document.getElementById('incomingSymptomsText').textContent = msg.symptoms || 'No symptoms provided.';
+                document.getElementById('incomingCallOverlay').style.display = 'flex';
+                return;
+            }
+
+            // Call accepted (Patient)
+            if (msg.type === 'call_accepted' && MY_ROLE === 'PATIENT') {
+                const lobby = document.getElementById('patient-lobby');
+                if (lobby) lobby.classList.remove('active');
+                toast('Call accepted — connecting video...', 'info');
+                if (!localStream) await startLocalMedia();
+                ensurePeerConnection();
+                return;
+            }
+
+            // Call rejected (Patient)
+            if (msg.type === 'call_rejected' && MY_ROLE === 'PATIENT') {
+                const lobby = document.getElementById('patient-lobby');
+                if (lobby) lobby.classList.add('active');
+                toast('Doctor could not answer right now.', 'warning');
+                return;
+            }
+
+            // Prescription sync (Patient)
+            if (msg.prescription !== undefined && MY_ROLE === 'PATIENT') {
+                const el = document.getElementById('prescriptionDisplay');
+                if (el) el.textContent = msg.prescription || 'Waiting for doctor\'s notes...';
+                return;
+            }
+
+            // Chat
+            if (msg.chat) { renderMsg(msg.chat, false); return; }
+
+            // WebRTC SDP / ICE
+            await handleSignal(msg);
+        };
+
+        ws.onclose = () => {
+            wsReady = false;
+            document.getElementById('conn-label').textContent = 'Disconnected';
+        };
+    }
+
+    function wsSend(obj) {
+        if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(obj));
+    }
+
+    /* ── Media helpers ── */
+    async function startLocalMedia() {
+        if (localStream) return; // already have a stream — don't request twice
+        try {
+            localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            document.getElementById('local-video').srcObject = localStream;
+            // If a peer connection already exists (e.g. created before media was ready),
+            // attach the tracks to it now.
+            if (peerConnection) {
+                localStream.getTracks().forEach(t => peerConnection.addTrack(t, localStream));
+            }
+        } catch(e) {
+            toast('Could not access camera/microphone.', 'warning');
+        }
+    }
+
+    async function initDoctorMedia() {
+        await startLocalMedia();
+        document.getElementById('placeholder-text').textContent = 'Set availability to receive calls...';
+    }
+
+    /* ── PeerConnection ──
+       ensurePeerConnection() is idempotent: it is called from several
+       places (on receiving an offer/ICE, on accepting/being accepted into
+       a call) and must never silently replace an in-progress connection,
+       which previously caused the doctor and patient to end up on two
+       different, unmatched RTCPeerConnection objects — each side only ever
+       saw its own local camera and never the other party's video. */
+    let pendingIceCandidates = [];
+
+    function ensurePeerConnection() {
+        if (peerConnection) return peerConnection;
+        peerConnection = new RTCPeerConnection(ICE_CFG);
+        if (localStream) localStream.getTracks().forEach(t => peerConnection.addTrack(t, localStream));
+        peerConnection.ontrack = (e) => {
+            document.getElementById('remote-video').srcObject = e.streams[0];
+            document.getElementById('video-placeholder').style.display = 'none';
+        };
+        peerConnection.onicecandidate = (e) => {
+            if (e.candidate) wsSend({ ice: e.candidate });
+        };
+        return peerConnection;
+    }
+
+    async function handleSignal(msg) {
+        ensurePeerConnection();
+        if (msg.sdp) {
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+            if (msg.sdp.type === 'offer') {
+                const answer = await peerConnection.createAnswer();
+                await peerConnection.setLocalDescription(answer);
+                wsSend({ sdp: peerConnection.localDescription });
+            }
+            // Flush any ICE candidates that arrived before we had a remote description
+            while (pendingIceCandidates.length) {
+                const candidate = pendingIceCandidates.shift();
+                try { await peerConnection.addIceCandidate(new RTCIceCandidate(candidate)); } catch(e) {}
+            }
+        } else if (msg.ice) {
+            if (peerConnection.remoteDescription && peerConnection.remoteDescription.type) {
+                try { await peerConnection.addIceCandidate(new RTCIceCandidate(msg.ice)); } catch(e) {}
+            } else {
+                pendingIceCandidates.push(msg.ice);
+            }
+        }
+    }
+
+    /* ── Doctor actions ── */
+    function toggleDuty() {
+        const on = document.getElementById('availabilityToggle').checked;
+        document.getElementById('statusLabel').textContent = on ? 'Available (Online)' : 'Off Duty';
+        document.getElementById('placeholder-text').textContent = on ? 'Ready — awaiting patient calls...' : 'Set availability to receive calls...';
+        wsSend({ type: 'doctor_status', available: on });
+    }
+
+    function acceptCall() {
+        document.getElementById('incomingCallOverlay').style.display = 'none';
+        wsSend({ type: 'call_accepted' });
+        toast('Connecting to patient...', 'info');
+        setTimeout(async () => {
+            ensurePeerConnection();
+            const offer = await peerConnection.createOffer();
+            await peerConnection.setLocalDescription(offer);
+            wsSend({ sdp: peerConnection.localDescription });
+        }, 600);
+    }
+
+    function rejectCall() {
+        document.getElementById('incomingCallOverlay').style.display = 'none';
+        wsSend({ type: 'call_rejected' });
+    }
+
+    function syncPrescription() {
+        const text = document.getElementById('prescriptionInput').value;
+        wsSend({ prescription: text });
+    }
+
+    /* ── Patient actions ── */
+    function initiateCall() {
+        const symptoms = document.getElementById('symptoms-input').value.trim();
+        if (!symptoms) { toast('Please describe your symptoms first.', 'warning'); return; }
+        const lobby = document.getElementById('patient-lobby');
+        if (lobby) lobby.classList.remove('active');
+        document.getElementById('placeholder-text').textContent = 'Calling doctor — awaiting response...';
+        wsSend({ type: 'call_request', symptoms: symptoms });
+    }
+
+    /* ── A/V controls ── */
+    function toggleMic() {
+        micOn = !micOn;
+        if (localStream) localStream.getAudioTracks().forEach(t => t.enabled = micOn);
+        document.getElementById('mic-btn').classList.toggle('active', micOn);
+        document.getElementById('mic-icon').innerHTML = micOn
+            ? '<path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>'
+            : '<path d="M19 11h-1.7c0 .74-.16 1.43-.43 2.05l1.23 1.23c.56-.98.9-2.09.9-3.28zm-4.02.17c0-.06.02-.11.02-.17V5c0-1.66-1.34-3-3-3S9 3.34 9 5v.18l5.98 5.99zM4.41 2.86L3 4.27l6 6V11c0 1.66 1.34 3 3 3c.23 0 .44-.03.66-.08l2.4 2.4c-.94.54-2.01.88-3.14.92v3.08h-2v-3.08c-3.39-.49-6-3.39-6-6.92h2c0 2.76 2.24 5 5 5 .57 0 1.1-.1 1.6-.28l2.5 2.5 1.41-1.41L4.41 2.86z"/>';
+    }
+
+    function toggleCam() {
+        camOn = !camOn;
+        if (localStream) localStream.getVideoTracks().forEach(t => t.enabled = camOn);
+        document.getElementById('cam-btn').classList.toggle('active', camOn);
+        document.getElementById('cam-icon').innerHTML = camOn
+            ? '<path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/>'
+            : '<path d="M21 6.5l-4 4V7c0-.55-.45-1-1-1H9.82L21 17.18V6.5zM3.27 2L2 3.27 4.73 6H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.21 0 .39-.08.55-.18L19.73 21 21 19.73 3.27 2zM5 16V8h.73l8 8H5z"/>';
+    }
+
+    /* ── Chat ── */
+    function sendChat() {
+        const inp = document.getElementById('chat-input');
+        if (!inp.value.trim()) return;
+        wsSend({ chat: inp.value });
+        renderMsg(inp.value, true);
+        inp.value = '';
+    }
+
+    function renderMsg(text, isMe) {
+        const box = document.getElementById('chat-messages');
+        const div = document.createElement('div');
+        div.className = 'chat-msg' + (isMe ? ' mine' : '');
+        const bubble = document.createElement('div');
+        bubble.className = 'bubble';
+        bubble.textContent = text;
+        div.appendChild(bubble);
+        box.appendChild(div);
+        box.scrollTop = box.scrollHeight;
+    }
+
+    /* ── Boot ── */
+    openWS();
+    /*]]>*/
+</script>
+</body>
+</html>

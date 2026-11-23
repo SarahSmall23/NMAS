@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Start Consultation - NMAS</title>
+
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+
+    <style>
+
+        *{
+            margin:0;
+            padding:0;
+            box-sizing:border-box;
+            font-family:Arial,sans-serif;
+        }
+
+        body{
+            background:#F0FAF5;
+            padding:40px;
+            color:#1A2E1A;
+        }
+
+        .container{
+            max-width:1000px;
+            margin:auto;
+        }
+
+        .card{
+            background:white;
+            padding:30px;
+            border-radius:18px;
+            box-shadow:0 8px 25px rgba(0,0,0,0.06);
+            margin-bottom:25px;
+        }
+
+        h1{
+            color:#1C2B2B;
+            margin-bottom:25px;
+        }
+
+        h3{
+            color:#1C2B2B;
+            margin-bottom:20px;
+        }
+
+        p{
+            margin-bottom:10px;
+        }
+
+        label{
+            display:block;
+            margin-bottom:8px;
+            margin-top:18px;
+            font-weight:600;
+            color:#1C2B2B;
+        }
+
+        textarea{
+            width:100%;
+            min-height:120px;
+            padding:14px;
+            border:1px solid #cbd5e1;
+            border-radius:10px;
+            resize:vertical;
+            font-size:14px;
+        }
+
+        .btn-row{
+            margin-top:25px;
+            display:flex;
+            gap:12px;
+            flex-wrap:wrap;
+        }
+
+        .btn{
+            display:inline-flex;
+            align-items:center;
+            gap:8px;
+            text-decoration:none;
+            border:none;
+            background:#059669;
+            color:white;
+            padding:13px 18px;
+            border-radius:10px;
+            font-size:14px;
+            font-weight:600;
+            cursor:pointer;
+        }
+
+        .btn:hover{
+            background:#1C2B2B;
+        }
+
+        .btn-secondary{
+            background:#64748b;
+        }
+
+        .btn-secondary:hover{
+            background:#475569;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>
+        <i class="ti ti-stethoscope"></i>
+        Start Consultation
+    </h1>
+
+    <div class="card">
+
+        <h3>Patient Details</h3>
+
+        <p>
+            <strong>Name:</strong>
+            <span th:text="${patient.fullName}">Patient Name</span>
+        </p>
+
+        <p>
+            <strong>ID Number:</strong>
+            <span th:text="${patient.idNumber}">ID Number</span>
+        </p>
+
+        <p>
+            <strong>Reason:</strong>
+            <span th:text="${appointment.reason}">Reason</span>
+        </p>
+
+    </div>
+
+    <div class="card">
+
+        <p style="margin-bottom:12px;"><a th:href="@{/follow-up/book(patientId=${patient.id})}" target="_blank" style="display:inline-flex;align-items:center;gap:6px;background:#0f766e;color:white;padding:9px 14px;border-radius:10px;text-decoration:none;font-size:13px;font-weight:600;"><i class="ti ti-calendar-plus"></i> Book follow-up / check-up for this patient</a></p>
+        <form th:action="@{/appointments/save-consultation}" method="post">
+
+            <input type="hidden"
+                   name="appointmentId"
+                   th:value="${appointment.id}">
+
+            <label>Symptoms</label>
+            <textarea name="symptoms" required></textarea>
+
+            <label>Diagnosis</label>
+            <textarea name="diagnosis" required></textarea>
+
+            <label>Treatment Plan</label>
+            <textarea name="treatmentPlan" required></textarea>
+
+            <label>Prescription Notes</label>
+            <textarea name="prescriptionNotes"></textarea>
+
+            <div class="btn-row">
+
+                <button type="submit" class="btn">
+
+                    <i class="ti ti-device-floppy"></i>
+                    Save Consultation
+
+                </button>
+
+                <a th:href="@{/appointments}" class="btn btn-secondary">
+
+                    <i class="ti ti-arrow-left"></i>
+                    Back to Appointments
+
+                </a>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+</body>
+</html>

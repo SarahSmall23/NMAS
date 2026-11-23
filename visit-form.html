@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Record Visit - NMAS</title>
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+    <style>
+        *{ margin:0; padding:0; box-sizing:border-box; font-family:Arial,sans-serif; }
+        body{ background:#F0FAF5; padding:40px; color:#1A2E1A; }
+        .container{ max-width:900px; margin:auto; }
+        .top-actions{ margin-bottom:20px; }
+        .back-btn{ display:inline-flex; align-items:center; gap:8px; text-decoration:none; background:#059669; color:white; padding:12px 18px; border-radius:10px; font-size:14px; font-weight:600; }
+        .back-btn:hover{ background:#1C2B2B; }
+        .card{ background:white; border-radius:18px; padding:35px; box-shadow:0 8px 30px rgba(0,0,0,0.08); }
+        h1{ color:#1C2B2B; margin-bottom:8px; }
+        .subtitle{ color:#64748b; margin-bottom:30px; }
+        .section-title{ color:#1C2B2B; font-size:18px; border-bottom:2px solid #e2e8f0; padding-bottom:8px; margin:28px 0 20px; }
+        .grid{ display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+        .full{ grid-column:1 / -1; }
+        .field{ display:flex; flex-direction:column; }
+        .field label{ margin-bottom:8px; font-size:14px; font-weight:600; color:#334155; }
+        .field select, .field textarea, .field input{
+            padding:12px; border:1px solid #cbd5e1; border-radius:10px; font-size:14px; background:#fff;
+        }
+        .field select:focus, .field textarea:focus{ border-color:#059669; outline:none; box-shadow:0 0 0 4px rgba(24,95,165,0.1); }
+        .hint{ margin-top:6px; color:#64748b; font-size:12px; }
+        textarea{ resize:vertical; }
+        .btn-area{ margin-top:30px; display:flex; gap:15px; flex-wrap:wrap; }
+        .btn{ padding:14px 22px; border:none; border-radius:10px; cursor:pointer; font-size:15px; font-weight:600; display:inline-flex; align-items:center; gap:8px; text-decoration:none; transition:0.2s; }
+        .btn-primary{ background:#059669; color:white; }
+        .btn-primary:hover{ background:#1C2B2B; }
+        .btn-secondary{ background:#e2e8f0; color:#1A2E1A; }
+        .btn-secondary:hover{ background:#cbd5e1; }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <div class="top-actions">
+        <a th:href="@{/visits}" class="back-btn">
+            <i class="ti ti-arrow-left"></i> Back to Visits
+        </a>
+    </div>
+
+    <div class="card">
+        <h1><i class="ti ti-clipboard-heart"></i> Record Patient Visit</h1>
+        <p class="subtitle">Capture a new walk-in or referred patient visit.</p>
+
+        <form action="/visits/save" method="post">
+
+            <h2 class="section-title">Patient & Clinical Staff</h2>
+
+            <div class="grid">
+                <div class="field">
+                    <label>Patient <span style="color:#dc2626">*</span></label>
+                    <select name="patientId" required>
+                        <option value="">Select patient</option>
+                        <option th:each="p : ${patients}"
+                                th:value="${p.id}"
+                                th:text="${p.fullName} + ' — ' + (${p.idNumber} != null ? ${p.idNumber} : 'No ID')">
+                        </option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Attending Doctor</label>
+                    <select name="doctorId">
+                        <option value="">Select doctor (optional)</option>
+                        <option th:each="d : ${doctors}"
+                                th:value="${d.id}"
+                                th:text="${d.fullName} + ' — ' + ${d.specialization}">
+                        </option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Facility</label>
+                    <select name="facilityId">
+                        <option value="">Select facility (optional)</option>
+                        <option th:each="f : ${facilities}"
+                                th:value="${f.id}"
+                                th:text="${f.facilityName}">
+                        </option>
+                    </select>
+                </div>
+            </div>
+
+            <h2 class="section-title">Clinical Information</h2>
+
+            <div class="grid">
+                <div class="field full">
+                    <label>Symptoms <span style="color:#dc2626">*</span></label>
+                    <textarea name="symptoms" rows="3" required
+                              placeholder="Describe the patient's presenting symptoms..."></textarea>
+                </div>
+                <div class="field full">
+                    <label>Diagnosis <span style="color:#dc2626">*</span></label>
+                    <textarea name="diagnosis" rows="3" required
+                              placeholder="Enter clinical diagnosis..."></textarea>
+                </div>
+                <div class="field full">
+                    <label>Treatment</label>
+                    <textarea name="treatment" rows="3"
+                              placeholder="Treatment plan or intervention..."></textarea>
+                </div>
+                <div class="field full">
+                    <label>Additional Notes</label>
+                    <textarea name="notes" rows="3"
+                              placeholder="Any additional clinical notes or observations..."></textarea>
+                </div>
+            </div>
+
+            <div class="btn-area">
+                <button type="submit" class="btn btn-primary">
+                    <i class="ti ti-device-floppy"></i> Save Visit
+                </button>
+                <a th:href="@{/visits}" class="btn btn-secondary">
+                    <i class="ti ti-x"></i> Cancel
+                </a>
+            </div>
+
+        </form>
+    </div>
+
+</div>
+</body>
+</html>

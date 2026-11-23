@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>NMAS Patient Registration</title>
+
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+
+    <style>
+
+        *{
+            margin:0;
+            padding:0;
+            box-sizing:border-box;
+            font-family:Arial, sans-serif;
+        }
+
+        body{
+            background:#F0FAF5;
+            padding:40px;
+            color:#1A2E1A;
+        }
+
+        .container{
+            max-width:1100px;
+            margin:auto;
+        }
+
+        .header{
+            margin-bottom:30px;
+        }
+
+        .top-actions{
+            margin-bottom:20px;
+        }
+
+        .dashboard-btn{
+            display:inline-flex;
+            align-items:center;
+            gap:8px;
+            text-decoration:none;
+            background:#059669;
+            color:white;
+            padding:12px 18px;
+            border-radius:10px;
+            font-size:14px;
+            font-weight:600;
+            transition:0.2s;
+        }
+
+        .dashboard-btn:hover{
+            background:#1C2B2B;
+        }
+
+        .header h1{
+            color:#1C2B2B;
+            margin-bottom:8px;
+            font-size:32px;
+        }
+
+        .header p{
+            color:#64748b;
+            font-size:15px;
+        }
+
+        .card{
+            background:white;
+            border-radius:18px;
+            padding:35px;
+            box-shadow:0 8px 30px rgba(0,0,0,0.08);
+        }
+
+        .form-note{
+            background:#ECFDF5;
+            border:1px solid #6EE7B7;
+            color:#065F46;
+            padding:14px;
+            border-radius:10px;
+            margin-bottom:25px;
+            font-size:14px;
+            line-height:1.6;
+        }
+
+        .section-title{
+            margin-top:35px;
+            margin-bottom:20px;
+            color:#1C2B2B;
+            border-bottom:2px solid #e2e8f0;
+            padding-bottom:8px;
+            font-size:20px;
+        }
+
+        .grid{
+            display:grid;
+            grid-template-columns:repeat(auto-fit,minmax(300px,1fr));
+            gap:20px;
+        }
+
+        .field{
+            display:flex;
+            flex-direction:column;
+        }
+
+        .field label{
+            margin-bottom:8px;
+            font-size:14px;
+            font-weight:600;
+            color:#334155;
+        }
+
+        .field input,
+        .field select,
+        .field textarea{
+            padding:12px;
+            border:1px solid #cbd5e1;
+            border-radius:10px;
+            font-size:14px;
+            background:#fff;
+            transition:0.2s;
+        }
+
+        .field input:focus,
+        .field select:focus,
+        .field textarea:focus{
+            border-color:#059669;
+            outline:none;
+            box-shadow:0 0 0 4px rgba(24,95,165,0.1);
+        }
+
+        .hint{
+            margin-top:6px;
+            color:#64748b;
+            font-size:12px;
+        }
+
+        textarea{
+            resize:vertical;
+        }
+
+        .checkbox-group{
+            margin-top:15px;
+            display:flex;
+            flex-direction:column;
+            gap:14px;
+        }
+
+        .checkbox-item{
+            display:flex;
+            align-items:flex-start;
+            gap:10px;
+            background:#f8fafc;
+            padding:14px;
+            border-radius:10px;
+            border:1px solid #e2e8f0;
+        }
+
+        .checkbox-item input{
+            margin-top:3px;
+        }
+
+        .checkbox-item label{
+            font-size:14px;
+            color:#334155;
+            line-height:1.5;
+        }
+
+        .btn-area{
+            margin-top:35px;
+            display:flex;
+            gap:15px;
+            flex-wrap:wrap;
+        }
+
+        .btn{
+            padding:14px 22px;
+            border:none;
+            border-radius:10px;
+            cursor:pointer;
+            font-size:15px;
+            font-weight:600;
+            display:flex;
+            align-items:center;
+            gap:8px;
+            transition:0.2s;
+            text-decoration:none;
+        }
+
+        .btn-primary{
+            background:#059669;
+            color:white;
+        }
+
+        .btn-primary:hover{
+            background:#1C2B2B;
+        }
+
+        .btn-secondary{
+            background:#e2e8f0;
+            color:#1A2E1A;
+        }
+
+        .btn-secondary:hover{
+            background:#cbd5e1;
+        }
+
+        .success{
+            background:#dcfce7;
+            color:#166534;
+            padding:14px;
+            border-radius:10px;
+            margin-bottom:20px;
+            border:1px solid #86efac;
+        }
+
+        .error{
+            color:#dc2626;
+            font-size:13px;
+            margin-top:5px;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="header">
+
+        <div class="top-actions">
+
+            <a th:href="@{/redirect-dashboard}" class="dashboard-btn">
+                <i class="ti ti-layout-dashboard"></i>
+                Back to Dashboard
+            </a>
+
+        </div>
+
+        <h1>
+            <i class="ti ti-user-plus"></i>
+            NMAS Patient Registration
+        </h1>
+
+        <p>
+            Register a patient into the National Medical Access System
+        </p>
+
+    </div>
+
+    <div class="card">
+
+        <div class="form-note">
+            <strong>Registration note:</strong>
+            Capture accurate patient identity, contact, emergency, medical and consent details.
+            If the patient provides a valid South African ID number, the date of birth will be filled automatically.
+            Passport details may be used for non-South African patients.
+        </div>
+
+        <div th:if="${successMessage}" class="success">
+            <i class="ti ti-circle-check"></i>
+            <span th:text="${successMessage}"></span>
+        </div>
+
+        <form th:action="@{/patients/register}" th:object="${patient}" method="post">
+
+            <h2 class="section-title">Identity Details</h2>
+
+            <div class="grid">
+
+                <div class="field">
+                    <label>Full Name</label>
+                    <input type="text" th:field="*{fullName}" required>
+                    <p class="error"
+                       th:if="${#fields.hasErrors('fullName')}"
+                       th:errors="*{fullName}">
+                    </p>
+                </div>
+
+                <div class="field">
+                    <label>South African ID Number</label>
+
+                    <input type="text"
+                           th:field="*{idNumber}"
+                           id="idNumber"
+                           maxlength="13"
+                           placeholder="Example: 9901015009087"
+                           oninput="autoFillDateOfBirthFromSAID()">
+
+                    <span class="hint">
+                        Enter 13 digits. Date of birth will auto-fill from the first 6 digits.
+                    </span>
+
+                    <p class="error"
+                       th:if="${#fields.hasErrors('idNumber')}"
+                       th:errors="*{idNumber}">
+                    </p>
+
+                    <p class="error" id="idNumberMessage"></p>
+
+                </div>
+
+                <div class="field">
+                    <label>Passport Number</label>
+                    <input type="text" th:field="*{passportNumber}">
+                </div>
+
+                <div class="field">
+                    <label>Date of Birth</label>
+
+                    <input type="date"
+                           th:field="*{dateOfBirth}"
+                           id="dateOfBirth">
+
+                    <span class="hint">
+                        Auto-filled when a valid South African ID number is entered.
+                    </span>
+                </div>
+
+                <div class="field">
+                    <label>Gender</label>
+
+                    <select th:field="*{gender}" required>
+                        <option value="">Select gender</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label>Ethnicity</label>
+
+                    <select th:field="*{ethnicity}">
+                        <option value="">Select ethnicity</option>
+                        <option value="African">African</option>
+                        <option value="Coloured">Coloured</option>
+                        <option value="Indian/Asian">Indian/Asian</option>
+                        <option value="White">White</option>
+                        <option value="Other">Other</option>
+                        <option value="Prefer not to say">Prefer not to say</option>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label>Nationality</label>
+                    <input type="text"
+                           th:field="*{nationality}"
+                           placeholder="South African">
+                </div>
+
+            </div>
+
+            <h2 class="section-title">Contact Details</h2>
+
+            <div class="grid">
+
+                <div class="field">
+                    <label>Email Address <span style="color:#64748b;font-weight:400;font-size:13px;">(Optional — if patient has one)</span></label>
+                    <input type="email" th:field="*{email}" placeholder="e.g. patient@gmail.com">
+                    <p style="font-size:12px;color:#059669;margin-top:4px;">
+                        💡 If provided, login credentials will be sent to this email.
+                    </p>
+                    <p class="error"
+                       th:if="${#fields.hasErrors('email')}"
+                       th:errors="*{email}">
+                    </p>
+                </div>
+
+                <div class="field">
+                    <label>Phone Number <span style="color:#dc2626;font-size:13px;">*</span></label>
+                    <input type="tel" inputmode="numeric" maxlength="13" pattern="(\+?27|0)[0-9 ]{9,12}" title="10-digit South African number, e.g. 0812345678" th:field="*{phoneNumber}" placeholder="e.g. 0812345678">
+                    <p style="font-size:12px;color:#059669;margin-top:4px;">
+                        📧 Login credentials are sent by email to the patient's personal email address, if one is entered.
+                    </p>
+                </div>
+
+                <div class="field">
+                    <label>Alternative Phone Number <span style="color:#64748b;font-weight:400;font-size:13px;">(Optional)</span></label>
+                    <input type="tel" inputmode="numeric" maxlength="13" pattern="(\+?27|0)[0-9 ]{9,12}" title="10-digit South African number, e.g. 0812345678" th:field="*{alternativePhoneNumber}">
+                </div>
+
+                <div class="field">
+                    <label>Address</label>
+                    <input type="text" th:field="*{address}">
+                </div>
+
+                <div class="field">
+                    <label>City / Town</label>
+                    <input type="text" th:field="*{city}">
+                </div>
+
+                <div class="field">
+                    <label>Province</label>
+
+                    <select th:field="*{province}">
+                        <option value="">Select province</option>
+                        <option value="Eastern Cape">Eastern Cape</option>
+                        <option value="Free State">Free State</option>
+                        <option value="Gauteng">Gauteng</option>
+                        <option value="KwaZulu-Natal">KwaZulu-Natal</option>
+                        <option value="Limpopo">Limpopo</option>
+                        <option value="Mpumalanga">Mpumalanga</option>
+                        <option value="Northern Cape">Northern Cape</option>
+                        <option value="North West">North West</option>
+                        <option value="Western Cape">Western Cape</option>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label>Postal Code</label>
+                    <input type="text" th:field="*{postalCode}">
+                </div>
+
+            </div>
+
+            <h2 class="section-title">Emergency & Next of Kin</h2>
+
+            <div class="grid">
+
+                <div class="field">
+                    <label>Next of Kin Name</label>
+                    <input type="text" th:field="*{nextOfKinName}">
+                </div>
+
+                <div class="field">
+                    <label>Relationship</label>
+                    <input type="text" th:field="*{nextOfKinRelationship}">
+                </div>
+
+                <div class="field">
+                    <label>Next of Kin Phone</label>
+                    <input type="tel" inputmode="numeric" maxlength="13" pattern="(\+?27|0)[0-9 ]{9,12}" title="10-digit South African number, e.g. 0812345678" th:field="*{nextOfKinPhone}">
+                </div>
+
+                <div class="field">
+                    <label>Emergency Contact Name</label>
+                    <input type="text" th:field="*{emergencyContactName}">
+                </div>
+
+                <div class="field">
+                    <label>Emergency Contact Phone</label>
+                    <input type="tel" inputmode="numeric" maxlength="13" pattern="(\+?27|0)[0-9 ]{9,12}" title="10-digit South African number, e.g. 0812345678" th:field="*{emergencyContactPhone}">
+                </div>
+
+            </div>
+
+            <h2 class="section-title">Medical Profile</h2>
+
+            <div class="grid">
+
+                <div class="field">
+                    <label>Blood Type</label>
+
+                    <select th:field="*{bloodType}">
+                        <option value="">Unknown</option>
+                        <option value="A+">A+</option>
+                        <option value="A-">A-</option>
+                        <option value="B+">B+</option>
+                        <option value="B-">B-</option>
+                        <option value="AB+">AB+</option>
+                        <option value="AB-">AB-</option>
+                        <option value="O+">O+</option>
+                        <option value="O-">O-</option>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label>Medical Aid Status</label>
+
+                    <select th:field="*{medicalAidStatus}">
+                        <option value="">Select status</option>
+                        <option value="None">None</option>
+                        <option value="Active">Active</option>
+                        <option value="Unknown">Unknown</option>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label>Medical Aid Provider</label>
+                    <input type="text" th:field="*{medicalAidProvider}">
+                </div>
+
+                <div class="field">
+                    <label>Medical Aid Number</label>
+                    <input type="text" th:field="*{medicalAidNumber}">
+                </div>
+
+                <div class="field">
+                    <label>Preferred Clinic / Hospital</label>
+                    <input type="text" th:field="*{preferredFacility}">
+                </div>
+
+            </div>
+
+            <br>
+
+            <div class="field">
+                <label>Known Allergies</label>
+                <textarea th:field="*{allergies}" rows="3"></textarea>
+            </div>
+
+            <br>
+
+            <div class="field">
+                <label>Chronic Conditions</label>
+                <textarea th:field="*{chronicConditions}" rows="3"></textarea>
+            </div>
+
+            <br>
+
+            <div class="field">
+                <label>Current Medication</label>
+                <textarea th:field="*{currentMedication}" rows="3"></textarea>
+            </div>
+
+            <br>
+
+            <div class="field">
+                <label>Past Surgeries</label>
+                <textarea th:field="*{pastSurgeries}" rows="3"></textarea>
+            </div>
+
+            <br>
+
+            <div class="field">
+                <label>Disabilities</label>
+                <textarea th:field="*{disabilities}" rows="3"></textarea>
+            </div>
+
+            <h2 class="section-title">Consent</h2>
+
+            <div class="checkbox-group">
+
+                <div class="checkbox-item">
+
+                    <input type="checkbox"
+                           th:field="*{consentToStoreRecords}"
+                           required>
+
+                    <label>
+                        I consent to NMAS securely storing my medical records.
+                    </label>
+
+                </div>
+
+                <div class="checkbox-item">
+
+                    <input type="checkbox"
+                           th:field="*{consentToShareRecords}"
+                           required>
+
+                    <label>
+                        I consent to authorised healthcare facilities accessing my records for treatment purposes.
+                    </label>
+
+                </div>
+
+            </div>
+
+            <div class="btn-area">
+
+                <button type="submit" class="btn btn-primary">
+                    <i class="ti ti-device-floppy"></i>
+                    Register Patient
+                </button>
+
+                <a th:href="@{/patients}" class="btn btn-secondary">
+                    <i class="ti ti-users"></i>
+                    View Patients
+                </a>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+<script>
+
+    function autoFillDateOfBirthFromSAID() {
+
+        const idInput = document.getElementById("idNumber");
+        const dobInput = document.getElementById("dateOfBirth");
+        const message = document.getElementById("idNumberMessage");
+
+        const idNumber = idInput.value.replace(/\D/g, "");
+
+        idInput.value = idNumber;
+
+        message.textContent = "";
+
+        if (idNumber.length < 6) {
+            dobInput.value = "";
+            return;
+        }
+
+        const yearPart = idNumber.substring(0, 2);
+        const monthPart = idNumber.substring(2, 4);
+        const dayPart = idNumber.substring(4, 6);
+
+        const currentYearTwoDigits = new Date().getFullYear() % 100;
+
+        const fullYear = parseInt(yearPart) <= currentYearTwoDigits
+            ? 2000 + parseInt(yearPart)
+            : 1900 + parseInt(yearPart);
+
+        const month = parseInt(monthPart);
+        const day = parseInt(dayPart);
+
+        const date = new Date(fullYear, month - 1, day);
+
+        const isValidDate =
+            date.getFullYear() === fullYear &&
+            date.getMonth() === month - 1 &&
+            date.getDate() === day;
+
+        if (!isValidDate) {
+
+            dobInput.value = "";
+
+            message.textContent =
+                "Invalid date inside South African ID number.";
+
+            return;
+        }
+
+        const formattedMonth =
+            String(month).padStart(2, "0");
+
+        const formattedDay =
+            String(day).padStart(2, "0");
+
+        dobInput.value =
+            `${fullYear}-${formattedMonth}-${formattedDay}`;
+
+        if (idNumber.length > 0 && idNumber.length < 13) {
+
+            message.textContent =
+                "South African ID number must be 13 digits.";
+        }
+
+        if (idNumber.length === 13) {
+            message.textContent = "";
+        }
+    }
+
+</script>
+
+</body>
+</html>

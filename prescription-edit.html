@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Edit Prescription - NMAS</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+    <style>
+        *{ margin:0; padding:0; box-sizing:border-box; font-family:Arial,sans-serif; }
+        body{ background:#F0FAF5; padding:40px; color:#1A2E1A; }
+        .container{ max-width:900px; margin:auto; }
+        .top-actions{ margin-bottom:20px; display:flex; gap:12px; flex-wrap:wrap; }
+        .nav-btn{ display:inline-flex; align-items:center; gap:8px; text-decoration:none;
+            background:#059669; color:white; padding:12px 18px; border-radius:10px;
+            font-size:14px; font-weight:600; transition:0.2s; }
+        .nav-btn:hover{ background:#1C2B2B; }
+        .nav-btn.secondary{ background:#e2e8f0; color:#1A2E1A; }
+        .nav-btn.secondary:hover{ background:#cbd5e1; }
+        .header{ margin-bottom:30px; }
+        .header h1{ color:#1C2B2B; font-size:32px; margin-bottom:8px; }
+        .header p{ color:#64748b; }
+        .card{ background:white; border-radius:18px; padding:35px; box-shadow:0 8px 30px rgba(0,0,0,0.08); }
+        .readonly-info{ background:#f8fafc; border-radius:12px; padding:18px; margin-bottom:25px;
+            display:flex; gap:30px; flex-wrap:wrap; }
+        .readonly-info div strong{ display:block; color:#64748b; font-size:13px; margin-bottom:4px; }
+        .readonly-info div span{ font-size:15px; font-weight:600; color:#1C2B2B; }
+        .med-summary{ background:#ECFDF5; border:1px solid #6EE7B7; border-radius:12px;
+            padding:16px; margin-bottom:25px; }
+        .med-summary p{ color:#065F46; font-size:14px; margin-bottom:8px; }
+        .med-summary a{ color:#059669; font-weight:600; text-decoration:none; }
+        .med-summary a:hover{ text-decoration:underline; }
+        .field{ margin-bottom:20px; }
+        .field label{ display:block; margin-bottom:8px; font-size:14px; font-weight:600; color:#334155; }
+        .field select, .field textarea{ width:100%; padding:12px; border:1px solid #cbd5e1;
+            border-radius:10px; font-size:14px; background:#fff; resize:vertical; }
+        .field select:focus, .field textarea:focus{
+            border-color:#059669; outline:none; box-shadow:0 0 0 3px rgba(5,150,105,0.1); }
+        .btn-area{ margin-top:30px; display:flex; gap:12px; flex-wrap:wrap; }
+        .btn{ padding:13px 22px; border:none; border-radius:10px; cursor:pointer; font-size:14px;
+            font-weight:600; display:inline-flex; align-items:center; gap:8px; transition:0.2s;
+            text-decoration:none; }
+        .btn-primary{ background:#059669; color:white; }
+        .btn-primary:hover{ background:#1C2B2B; }
+        .btn-secondary{ background:#e2e8f0; color:#1A2E1A; }
+        .btn-secondary:hover{ background:#cbd5e1; }
+        .badge{ display:inline-block; padding:4px 10px; border-radius:20px; font-size:12px;
+            font-weight:600; background:#dcfce7; color:#166534; }
+        .badge.cancelled{ background:#fee2e2; color:#991b1b; }
+        .badge.completed{ background:#dbeafe; color:#1e40af; }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <div class="top-actions">
+        <a th:href="@{/prescriptions/{id}/view(id=${prescription.id})}" class="nav-btn secondary">
+            <i class="ti ti-arrow-left"></i> Back to Prescription
+        </a>
+        <a th:href="@{/prescriptions}" class="nav-btn secondary">
+            <i class="ti ti-list"></i> All Prescriptions
+        </a>
+        <a th:href="@{/redirect-dashboard}" class="nav-btn secondary">
+            <i class="ti ti-layout-dashboard"></i> Dashboard
+        </a>
+    </div>
+
+    <div class="header">
+        <h1><i class="ti ti-pill"></i> Edit Prescription</h1>
+        <p>Update prescription status and overall instructions. Manage individual medications on the prescription view page.</p>
+    </div>
+
+    <div class="card">
+
+        <div class="readonly-info">
+            <div>
+                <strong>Patient</strong>
+                <span th:text="${prescription.patient.fullName}">Patient</span>
+            </div>
+            <div>
+                <strong>Prescribed On</strong>
+                <span th:text="${prescription.prescriptionDate}">Date</span>
+            </div>
+            <div th:if="${prescription.doctor != null}">
+                <strong>Prescribing Doctor</strong>
+                <span th:text="'Dr. ' + ${prescription.doctor.fullName}">Doctor</span>
+            </div>
+            <div th:if="${prescription.consultation != null}">
+                <strong>Linked Consultation</strong>
+                <span th:text="${prescription.consultation.consultationDate}">Consultation</span>
+            </div>
+            <div>
+                <strong>Current Status</strong>
+                <span class="badge"
+                      th:classappend="${prescription.status == 'CANCELLED'} ? 'cancelled' : (${prescription.status == 'COMPLETED'} ? 'completed' : '')"
+                      th:text="${prescription.status}">ACTIVE</span>
+            </div>
+        </div>
+
+        <div class="med-summary">
+            <p><i class="ti ti-pill" style="color:#059669;"></i>
+                <strong th:text="${#lists.size(prescription.medicationLines)}">0</strong> medication line(s) on this prescription.</p>
+            <p>To add or remove medications, use the
+                <a th:href="@{/prescriptions/{id}/view(id=${prescription.id})}">prescription view page</a>.</p>
+        </div>
+
+        <form th:action="@{/prescriptions/{id}/update(id=${prescription.id})}" method="post">
+
+            <div class="field">
+                <label>Status</label>
+                <select name="status" required>
+                    <option value="ACTIVE" th:selected="${prescription.status == 'ACTIVE'}">Active</option>
+                    <option value="COMPLETED" th:selected="${prescription.status == 'COMPLETED'}">Completed</option>
+                    <option value="CANCELLED" th:selected="${prescription.status == 'CANCELLED'}">Cancelled</option>
+                </select>
+            </div>
+
+            <div class="field">
+                <label>Overall Instructions / Notes</label>
+                <textarea name="instructions" rows="4"
+                          placeholder="General prescription notes visible to pharmacist..."
+                          th:text="${prescription.instructions}"></textarea>
+            </div>
+
+            <div class="btn-area">
+                <button type="submit" class="btn btn-primary">
+                    <i class="ti ti-device-floppy"></i> Save Changes
+                </button>
+                <a th:href="@{/prescriptions/{id}/view(id=${prescription.id})}" class="btn btn-secondary">
+                    <i class="ti ti-x"></i> Cancel
+                </a>
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+</body>
+</html>

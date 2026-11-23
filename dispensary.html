@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Dispensary Queue - NMAS</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;font-family:Arial,sans-serif;}
+        body{background:#F0FAF5;color:#1A2E1A;}
+        .layout{display:flex;min-height:100vh;}
+        .sidebar{width:280px;background:#1C2B2B;color:white;padding:30px 20px;display:flex;flex-direction:column;flex-shrink:0;}
+        .logo{margin-bottom:40px;}
+        .logo h1{font-size:28px;margin-bottom:6px;}
+        .logo p{color:#cbd5e1;font-size:13px;}
+        .menu{display:flex;flex-direction:column;gap:12px;}
+        .menu a{text-decoration:none;color:white;padding:14px 16px;border-radius:12px;display:flex;align-items:center;gap:12px;transition:0.2s;font-size:15px;}
+        .menu a:hover{background:rgba(255,255,255,0.12);}
+        .menu .active{background:#059669;}
+        .badge-count{background:#ef4444;color:white;border-radius:20px;padding:2px 8px;font-size:11px;font-weight:700;margin-left:auto;}
+        .logout{margin-top:auto;}
+        .logout a{text-decoration:none;color:white;padding:14px 16px;border-radius:12px;display:flex;align-items:center;gap:12px;font-size:15px;font-weight:600;background:#dc2626;}
+        .logout a:hover{background:#b91c1c;}
+        .main{flex:1;padding:35px;overflow-x:auto;}
+        .topbar{margin-bottom:28px;}
+        .topbar h2{font-size:30px;color:#1C2B2B;margin-bottom:4px;}
+        .topbar p{color:#64748b;font-size:14px;}
+
+        .flash-ok{background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;padding:14px 18px;border-radius:10px;margin-bottom:20px;display:flex;align-items:center;gap:10px;font-size:14px;}
+        .flash-err{background:#fef2f2;border:1px solid #fecaca;color:#dc2626;padding:14px 18px;border-radius:10px;margin-bottom:20px;display:flex;align-items:center;gap:10px;font-size:14px;}
+
+        .stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:30px;}
+        .stat{background:white;border-radius:16px;padding:20px 24px;box-shadow:0 6px 20px rgba(0,0,0,0.06);display:flex;justify-content:space-between;align-items:center;}
+        .stat.urgent{border:2px solid #ef4444;}
+        .stat-label{font-size:13px;color:#64748b;margin-bottom:6px;}
+        .stat-value{font-size:32px;font-weight:700;color:#1C2B2B;}
+        .stat.urgent .stat-value{color:#dc2626;}
+        .stat i{font-size:36px;color:#059669;}
+        .stat.urgent i{color:#dc2626;}
+
+        .section-title{font-size:18px;font-weight:700;color:#1C2B2B;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+        .section-title i{color:#059669;}
+        .card{background:white;border-radius:18px;padding:24px;box-shadow:0 8px 25px rgba(0,0,0,0.06);margin-bottom:28px;overflow-x:auto;}
+        .empty{text-align:center;padding:40px;color:#94a3b8;}
+        .empty i{font-size:42px;color:#059669;display:block;margin-bottom:10px;}
+
+        table{width:100%;border-collapse:collapse;font-size:13px;min-width:960px;}
+        thead{background:#1C2B2B;color:white;}
+        th{padding:13px 14px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;}
+        td{padding:12px 14px;border-bottom:1px solid #f1f5f9;vertical-align:middle;}
+        tr:hover td{background:#f8fff9;}
+
+        /* Pack calculation box */
+        .pack-box{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px 14px;min-width:260px;}
+        .pack-row{display:flex;align-items:center;justify-content:space-between;font-size:12px;color:#374151;margin-bottom:6px;}
+        .pack-row:last-child{margin-bottom:0;}
+        .pack-row strong{color:#1C2B2B;}
+        .pack-total{background:#059669;color:white;border-radius:8px;padding:8px 12px;text-align:center;font-size:13px;font-weight:700;margin-top:10px;}
+        .pack-pills{font-size:11px;color:#6b7280;margin-top:4px;text-align:center;}
+        .pack-warn{background:#fffbeb;border-color:#fcd34d;color:#92400e;}
+        .pack-warn .pack-total{background:#d97706;}
+
+        .qty-form{display:flex;flex-direction:column;gap:8px;}
+        .qty-row{display:flex;align-items:center;gap:8px;}
+        .qty-input{width:72px;padding:8px 10px;border:2px solid #059669;border-radius:8px;font-size:14px;font-weight:700;text-align:center;color:#1C2B2B;}
+        .qty-input:focus{outline:none;border-color:#047857;box-shadow:0 0 0 3px rgba(5,150,105,0.15);}
+        .qty-label{font-size:12px;color:#64748b;font-weight:600;}
+        .live-pills{font-size:12px;color:#059669;font-weight:600;background:#f0fdf4;padding:4px 10px;border-radius:6px;white-space:nowrap;}
+        .notes-input{width:100%;padding:7px 10px;border:1px solid #d1fae5;border-radius:8px;font-size:12px;}
+        .btn-dispense{display:inline-flex;align-items:center;gap:6px;padding:10px 16px;background:#059669;color:white;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;transition:0.2s;width:100%;justify-content:center;}
+        .btn-dispense:hover{background:#047857;}
+        .btn-dispense:disabled{opacity:0.45;cursor:not-allowed;}
+        .btn-reject{display:inline-flex;align-items:center;gap:5px;padding:9px 14px;background:#ef4444;color:white;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;}
+        .btn-reject:hover{background:#b91c1c;}
+
+        .med-name{font-weight:700;color:#1C2B2B;}
+        .med-sub{font-size:11px;color:#64748b;margin-top:2px;}
+        .no-inv{font-size:11px;color:#d97706;display:flex;align-items:center;gap:4px;margin-top:3px;}
+        .text-muted{color:#94a3b8;font-size:12px;}
+
+        .stock-badge{display:inline-flex;align-items:center;gap:5px;padding:6px 10px;border-radius:8px;font-size:12px;font-weight:600;}
+        .stock-ok{background:#dcfce7;color:#166534;}
+        .stock-low{background:#fef3c7;color:#92400e;}
+        .stock-out{background:#fee2e2;color:#991b1b;}
+
+        .badge{display:inline-block;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;}
+        .badge.dispensed{background:#dcfce7;color:#166534;}
+        .badge.rejected{background:#fee2e2;color:#991b1b;}
+        .badge.out{background:#f1f5f9;color:#475569;}
+        .badge.pending{background:#fef3c7;color:#92400e;}
+    
+        /* Fixed-height layout: the green sidebar stays in place (logout always visible); only the white content area scrolls. */
+        html, body { height:100%; overflow:hidden; }
+        .layout { height:100vh; min-height:0; }
+        .sidebar { height:100vh; overflow-y:auto; flex-shrink:0; }
+        .main { height:100vh; overflow-y:auto !important; }
+    </style>
+</head>
+<body>
+<div class="layout">
+    <div class="sidebar">
+        <div class="logo"><h1>NMAS</h1><p>National Medical Access System</p></div>
+        <div class="menu">
+            <a th:href="@{/pharmacist-dashboard}"><i class="ti ti-layout-dashboard"></i> Dashboard</a>
+            <a th:href="@{/dispensary}" class="active">
+                <i class="ti ti-prescription"></i> Dispensary Queue
+                <span th:if="${pendingCount > 0}" class="badge-count" th:text="${pendingCount}"></span>
+            </a>
+            <a th:href="@{/prescriptions}"><i class="ti ti-pill"></i> Prescriptions</a>
+            <a th:href="@{/inventory}"><i class="ti ti-building-warehouse"></i> Inventory</a>
+            <a th:href="@{/inventory/report}"><i class="ti ti-file-analytics"></i> Stock Reports</a>
+        </div>
+        <div class="logout"><a th:href="@{/logout}"><i class="ti ti-logout"></i> Logout</a></div>
+    </div>
+
+    <div class="main">
+        <div class="topbar">
+            <h2><i class="ti ti-prescription" style="color:#059669;"></i> Dispensary Queue</h2>
+            <p>Medication is dispensed exactly as it's stored — packs of tablets/capsules, vials, tubes, bottles, inhalers, patches and more.</p>
+        </div>
+
+        <div th:if="${success}" class="flash-ok"><i class="ti ti-circle-check"></i><span th:text="${success}"></span></div>
+        <div th:if="${error}" class="flash-err"><i class="ti ti-alert-circle"></i><span th:text="${error}"></span></div>
+
+        <div class="stat-row">
+            <div class="stat" th:classappend="${pendingCount > 0} ? 'urgent'">
+                <div>
+                    <div class="stat-label">Pending Orders</div>
+                    <div class="stat-value" th:text="${pendingCount}">0</div>
+                </div>
+                <i class="ti ti-clock-hour-4"></i>
+            </div>
+        </div>
+
+        <!-- ═══ REPEAT PILL COLLECTIONS ═════════════════════════════════════ -->
+        <div class="section-title"><i class="ti ti-calendar-event"></i> Repeat pill collections open today
+            <span class="text-muted" th:text="'(' + ${collectionsToday == null ? 0 : #lists.size(collectionsToday)} + ')'"></span></div>
+        <div class="card" style="margin-bottom:28px;">
+            <p class="text-muted" style="margin-bottom:12px;">Monthly collectors have the first four days of the month. The patient reports to reception first; once reception confirms, hand over the pills and click <strong>Collected</strong>.</p>
+            <table>
+                <thead><tr><th>Patient</th><th>Prescription</th><th>Window</th><th>Reception</th><th>Status</th><th></th></tr></thead>
+                <tbody>
+                <tr th:if="${collectionsToday == null or #lists.isEmpty(collectionsToday)}"><td colspan="6" style="text-align:center;padding:26px;color:#94a3b8;">Nobody is due to collect today.</td></tr>
+                <tr th:each="c : ${collectionsToday}">
+                    <td><strong th:text="${c.patient.fullName}"></strong><div class="text-muted" th:text="${c.patient.idNumber}"></div></td>
+                    <td><strong th:text="${c.prescription.displayNumber}"></strong>
+                        <div class="text-muted" th:text="${c.prescription.doctor != null ? 'Dr. ' + c.prescription.doctor.fullName : ''}"></div>
+                        <div class="text-muted" th:text="'Issued ' + ${c.prescription.prescriptionDate}"></div></td>
+                    <td th:text="${c.windowStart} + ' → ' + ${c.windowEnd}"></td>
+                    <td>
+                        <span th:if="${c.status == 'DUE'}" style="color:#b45309;">Not yet confirmed</span>
+                        <span th:if="${c.status != 'DUE'}" style="color:#166534;">Confirmed <span th:if="${c.checkedInAt != null}" th:text="${#temporals.format(c.checkedInAt, 'HH:mm')}"></span></span>
+                    </td>
+                    <td>
+                        <span th:if="${c.status == 'DUE'}" class="stock-badge stock-low">Waiting for reception</span>
+                        <span th:if="${c.status == 'CHECKED_IN'}" class="stock-badge stock-ok">Ready to collect</span>
+                        <span th:if="${c.status == 'COLLECTED'}" class="stock-badge stock-ok">Collected</span>
+                        <span th:if="${c.status == 'EXPIRED'}" class="stock-badge stock-out">Expired</span>
+                    </td>
+                    <td>
+                        <form th:if="${c.status == 'CHECKED_IN'}" th:action="@{/dispensary/collections/{id}/collected(id=${c.id})}" method="post">
+                            <button type="submit" class="btn-dispense"><i class="ti ti-check"></i> Collected</button>
+                        </form>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ═══ PENDING ORDERS ═══════════════════════════════════════════════ -->
+        <div class="section-title"><i class="ti ti-clock-hour-4"></i> Pending Orders</div>
+        <div class="card">
+            <div th:if="${#lists.isEmpty(pendingOrders)}" class="empty">
+                <i class="ti ti-circle-check"></i>
+                No pending dispensary orders. All caught up!
+            </div>
+
+            <table th:unless="${#lists.isEmpty(pendingOrders)}">
+                <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Patient</th>
+                    <th>Medication</th>
+                    <th>Prescription</th>
+                    <th>Pack Calculation</th>
+                    <th>Stock</th>
+                    <th>Dispense</th>
+                    <th>Reject</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="order : ${pendingOrders}"
+                    th:with="unitLabel=${order.inventoryItem != null and order.inventoryItem.unit != null ? order.inventoryItem.unit : 'unit(s)'},
+                             packTracked=${order.inventoryItem != null ? order.inventoryItem.packTracked : (order.medication != null and order.medication.pillsPerPack != null)},
+                             effPillsPerPack=${order.inventoryItem != null ? order.inventoryItem.effectivePillsPerPack : (order.medication != null ? order.medication.pillsPerPack : null)}">
+                    <td class="text-muted" th:text="${order.id}"></td>
+
+                    <!-- Patient -->
+                    <td>
+                        <strong th:text="${order.patientName}"></strong>
+                        <div class="text-muted"><strong th:text="${order.prescription.displayNumber}"></strong></div>
+                        <div class="text-muted" th:text="'Issued ' + ${order.prescription.prescriptionDate}"></div>
+                        <div th:if="${elsewhere != null and elsewhere[order.id] != null and !elsewhere[order.id].isEmpty()}"
+                             style="background:#fef3c7;border:1px solid #fcd34d;color:#92400e;border-radius:8px;padding:5px 8px;font-size:12px;margin-top:6px;">
+                            <strong>Check before dispensing:</strong>
+                            <div th:each="n : ${elsewhere[order.id]}" th:text="${n}"></div>
+                        </div>
+                        <div th:if="${elsewhere != null and elsewhere[order.id] != null and elsewhere[order.id].isEmpty()}"
+                             style="color:#166534;font-size:11px;margin-top:4px;">Not prescribed at any other facility in the last 90 days</div>
+                        <div th:if="${order.prescription.expired}" style="color:#b91c1c;font-weight:700;font-size:12px;" th:text="'EXPIRED ' + ${order.prescription.effectiveValidUntil} + ' - cannot dispense'"></div>
+                        <div th:unless="${order.prescription.expired}" class="text-muted" th:text="'Valid until ' + ${order.prescription.effectiveValidUntil}"></div>
+                        <div class="text-muted" th:if="${order.prescription.doctor != null}" th:text="'Dr. ' + ${order.prescription.doctor.fullName}"></div>
+                    </td>
+
+                    <!-- Medication -->
+                    <td>
+                        <div class="med-name" th:text="${order.medicationName}"></div>
+                        <div class="med-sub" th:if="${order.medication != null}"
+                             th:text="${order.medication.dosageForm != null ? order.medication.dosageForm : ''} + ' · stored as ' + ${unitLabel}"></div>
+                        <div class="med-sub" th:if="${packTracked and effPillsPerPack != null}"
+                             th:text="${effPillsPerPack} + ' pills per ' + ${#strings.toLowerCase(unitLabel)}"></div>
+                        <div th:if="${order.inventoryItem == null}" class="no-inv">
+                            <i class="ti ti-alert-triangle"></i> Not in inventory
+                        </div>
+                        <div th:if="${order.inventoryItem != null and order.inventoryItem.expired}" class="no-inv">
+                            <i class="ti ti-calendar-x"></i> EXPIRED <span th:text="${order.inventoryItem.expiryDate}"></span> &mdash; cannot be dispensed
+                        </div>
+                        <div th:if="${order.inventoryItem != null and order.inventoryItem.outOfStock and !order.inventoryItem.expired}" class="no-inv">
+                            <i class="ti ti-circle-x"></i> Out of stock
+                        </div>
+                    </td>
+
+                    <!-- Prescription details -->
+                    <td>
+                        <div style="font-size:12px;line-height:1.7;">
+                            <div><span style="color:#64748b;">Dosage:</span> <strong th:text="${order.dosage ?: '—'}"></strong></div>
+                            <div><span style="color:#64748b;">Frequency:</span> <strong th:text="${order.frequency ?: '—'}"></strong></div>
+                            <div><span style="color:#64748b;">Duration:</span> <strong th:text="${order.duration ?: '—'}"></strong></div>
+                        </div>
+                    </td>
+
+                    <!-- Dispensing Calculation Box -->
+                    <td>
+                        <!-- Pack-tracked items (tablets/capsules): counted out and packed -->
+                        <div class="pack-box" th:if="${packTracked}"
+                             th:classappend="${order.inventoryItem != null and order.inventoryItem.lowStock} ? 'pack-warn'">
+                            <div class="pack-row">
+                                <span>Total pills needed:</span>
+                                <strong th:text="${order.suggestedQuantity != null ? order.suggestedQuantity + ' pills' : 'Unknown'}"></strong>
+                            </div>
+                            <div class="pack-row">
+                                <span th:text="'Pills per ' + ${#strings.toLowerCase(unitLabel)} + ':'"></span>
+                                <strong th:text="${effPillsPerPack != null ? effPillsPerPack : 'N/A'}"></strong>
+                            </div>
+                            <div class="pack-row">
+                                <span>Formula:</span>
+                                <strong th:if="${order.suggestedQuantity != null and effPillsPerPack != null}"
+                                        th:text="'⌈' + ${order.suggestedQuantity} + '÷' + ${effPillsPerPack} + '⌉'"></strong>
+                                <strong th:unless="${order.suggestedQuantity != null and effPillsPerPack != null}">—</strong>
+                            </div>
+                            <div class="pack-total"
+                                 th:text="${order.suggestedPacks != null ? order.suggestedPacks + ' ' + #strings.toUpperCase(unitLabel) + ' RECOMMENDED' : 'UNKNOWN'}"></div>
+                            <div class="pack-pills"
+                                 th:if="${order.suggestedPacks != null and effPillsPerPack != null}"
+                                 th:text="'= ' + ${order.suggestedPacks * effPillsPerPack} + ' pills total'"></div>
+                        </div>
+
+                        <!-- Everything else (vials, tubes, bottles, inhalers, patches...): dispensed as whole containers, matching how it's stored -->
+                        <div class="pack-box" th:unless="${packTracked}"
+                             th:classappend="${order.inventoryItem != null and order.inventoryItem.lowStock} ? 'pack-warn'">
+                            <div class="pack-row">
+                                <span>Stored as:</span>
+                                <strong th:text="${unitLabel}"></strong>
+                            </div>
+                            <div class="pack-row" th:if="${order.medication != null and order.medication.dosageForm != null}">
+                                <span>Dosage form:</span>
+                                <strong th:text="${order.medication.dosageForm}"></strong>
+                            </div>
+                            <div class="pack-total"
+                                 th:text="${(order.suggestedPacks != null ? order.suggestedPacks : 1)} + ' ' + ${#strings.toUpperCase(unitLabel)} + ' RECOMMENDED'"></div>
+                            <div class="pack-pills">Dispensed whole, as stored — not split or counted individually.</div>
+                        </div>
+                    </td>
+
+                    <!-- Stock -->
+                    <td>
+                        <span th:if="${order.inventoryItem == null}" class="text-muted">Not in inventory</span>
+                        <div th:if="${order.inventoryItem != null}">
+                            <span class="stock-badge stock-ok"
+                                  th:if="${!order.inventoryItem.outOfStock and !order.inventoryItem.lowStock}"
+                                  th:text="${order.inventoryItem.quantityInStock} + ' ' + ${#strings.toLowerCase(unitLabel)}">
+                                <i class="ti ti-circle-check"></i>
+                            </span>
+                            <span class="stock-badge stock-low"
+                                  th:if="${!order.inventoryItem.outOfStock and order.inventoryItem.lowStock}"
+                                  th:text="${order.inventoryItem.quantityInStock} + ' ' + ${#strings.toLowerCase(unitLabel)} + ' (low)'">
+                                <i class="ti ti-alert-triangle"></i>
+                            </span>
+                            <span class="stock-badge stock-out"
+                                  th:if="${order.inventoryItem.outOfStock}"
+                                  th:text="'0 ' + ${#strings.toLowerCase(unitLabel)} + ' (out)'">
+                                <i class="ti ti-circle-x"></i>
+                            </span>
+                            <div class="text-muted" style="margin-top:4px;"
+                                 th:if="${packTracked and effPillsPerPack != null}"
+                                 th:text="'= ' + ${order.inventoryItem.quantityInStock * effPillsPerPack} + ' pills'"></div>
+                        </div>
+                    </td>
+
+                    <!-- Dispense form -->
+                    <td>
+                        <form th:action="@{/dispensary/{id}/dispense(id=${order.id})}" method="post" class="qty-form">
+                            <div class="qty-row">
+                                <input type="number" name="packs"
+                                       class="qty-input"
+                                       min="1"
+                                       th:max="${order.inventoryItem != null ? order.inventoryItem.quantityInStock : 9999}"
+                                       th:value="${order.suggestedPacks != null ? order.suggestedPacks : 1}"
+                                       th:id="'packs-' + ${order.id}"
+                                       th:attr="data-pills-per-pack=${packTracked and effPillsPerPack != null ? effPillsPerPack : 0}"
+                                       oninput="updatePills(this)"
+                                       required/>
+                                <span class="qty-label" th:text="${#strings.toLowerCase(unitLabel)}">unit(s)</span>
+                            </div>
+                            <span class="live-pills"
+                                  th:id="'pills-display-' + ${order.id}"
+                                  th:if="${packTracked and effPillsPerPack != null}"
+                                  th:text="'= ' + ${(order.suggestedPacks != null ? order.suggestedPacks : 1) * effPillsPerPack} + ' pills'">
+                            </span>
+                            <span class="live-pills" th:if="${!packTracked}"
+                                  th:text="'Dispensed whole, as stored.'">Dispensed whole, as stored.</span>
+                            <input type="text" name="notes" class="notes-input" placeholder="Notes (optional)"/>
+                            <button type="submit" class="btn-dispense"
+                                    th:disabled="${order.inventoryItem == null or order.inventoryItem.outOfStock or order.inventoryItem.expired}">
+                                <i class="ti ti-arrow-bar-right"></i> Dispense
+                            </button>
+                        </form>
+                    </td>
+
+                    <!-- Reject -->
+                    <td>
+                        <form th:action="@{/dispensary/{id}/reject(id=${order.id})}" method="post"
+                              onsubmit="return confirm('Reject this dispensary order?')">
+                            <input type="hidden" name="notes" value="Rejected by pharmacist"/>
+                            <button type="submit" class="btn-reject"><i class="ti ti-x"></i> Reject</button>
+                        </form>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ═══ RECENT HISTORY ═══════════════════════════════════════════════ -->
+        <div class="section-title" th:unless="${#lists.isEmpty(recentOrders)}">
+            <i class="ti ti-history"></i> Recent Dispensed / Rejected
+        </div>
+        <div class="card" th:unless="${#lists.isEmpty(recentOrders)}">
+            <table>
+                <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Patient</th>
+                    <th>Medication</th>
+                    <th>Dispensed</th>
+                    <th>Total Pills</th>
+                    <th>Status</th>
+                    <th>By</th>
+                    <th>Time</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="order : ${recentOrders}"
+                    th:with="unitLabel=${order.inventoryItem != null and order.inventoryItem.unit != null ? order.inventoryItem.unit : 'unit(s)'}">
+                    <td class="text-muted" th:text="${order.id}"></td>
+                    <td><div th:text="${order.patientName}"></div><div class="text-muted" th:text="${order.prescription != null ? order.prescription.displayNumber : ''}"></div></td>
+                    <td>
+                        <div th:text="${order.medicationName}"></div>
+                        <div class="text-muted" th:if="${order.medication != null}"
+                             th:text="${order.medication.dosageForm != null ? order.medication.dosageForm + ' · ' : ''} + 'stored as ' + ${unitLabel}"></div>
+                    </td>
+                    <td>
+                        <strong th:if="${order.dispensedPacks != null}"
+                                th:text="${order.dispensedPacks} + ' ' + ${#strings.toLowerCase(unitLabel)}"></strong>
+                        <span th:unless="${order.dispensedPacks != null}" class="text-muted">—</span>
+                    </td>
+                    <td>
+                        <span th:if="${order.dispensedQuantity != null}"
+                              th:text="${order.dispensedQuantity} + ' pills'"></span>
+                        <span th:unless="${order.dispensedQuantity != null}" class="text-muted">—</span>
+                    </td>
+                    <td>
+                        <span class="badge"
+                              th:classappend="${order.status == 'DISPENSED'} ? 'dispensed' : (${order.status == 'REJECTED'} ? 'rejected' : 'out')"
+                              th:text="${order.status}"></span>
+                    </td>
+                    <td class="text-muted" th:text="${order.dispensedBy ?: '—'}"></td>
+                    <td class="text-muted"
+                        th:text="${order.dispensedAt != null ? #temporals.format(order.dispensedAt, 'dd MMM HH:mm') : '—'}"></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+function updatePills(input) {
+    const packs = parseInt(input.value) || 0;
+    const pillsPerPack = parseInt(input.getAttribute('data-pills-per-pack')) || 0;
+    const id = input.id.replace('packs-', '');
+    const display = document.getElementById('pills-display-' + id);
+    if (display && pillsPerPack > 0) {
+        display.textContent = '= ' + (packs * pillsPerPack) + ' pills';
+    }
+}
+</script>
+</body>
+</html>

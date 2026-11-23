@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <title>Search Records - NMAS</title>
+
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+
+    <style>
+
+        *{
+            margin:0;
+            padding:0;
+            box-sizing:border-box;
+            font-family:Arial, sans-serif;
+        }
+
+        body{
+            background:#F0FAF5;
+            padding:40px;
+            color:#1A2E1A;
+        }
+
+        .container{
+            max-width:1500px;
+            margin:auto;
+        }
+
+        .top-actions{
+            margin-bottom:20px;
+        }
+
+        .dashboard-btn{
+            display:inline-flex;
+            align-items:center;
+            gap:8px;
+            text-decoration:none;
+            background:#059669;
+            color:white;
+            padding:12px 18px;
+            border-radius:10px;
+            font-size:14px;
+            font-weight:600;
+            transition:0.2s;
+        }
+
+        .dashboard-btn:hover{
+            background:#1C2B2B;
+        }
+
+        .header{
+            margin-bottom:30px;
+        }
+
+        .header h1{
+            color:#1C2B2B;
+            font-size:34px;
+            margin-bottom:10px;
+        }
+
+        .header p{
+            color:#64748b;
+            font-size:15px;
+        }
+
+        .search-card{
+            background:white;
+            border-radius:18px;
+            padding:30px;
+            box-shadow:0 8px 30px rgba(0,0,0,0.08);
+            margin-bottom:30px;
+        }
+
+        .search-form{
+            display:flex;
+            gap:15px;
+            flex-wrap:wrap;
+            align-items:center;
+        }
+
+        .search-input{
+            flex:1;
+            min-width:300px;
+            position:relative;
+        }
+
+        .search-input i{
+            position:absolute;
+            left:14px;
+            top:14px;
+            color:#64748b;
+        }
+
+        .search-input input{
+            width:100%;
+            padding:14px 14px 14px 42px;
+            border:1px solid #cbd5e1;
+            border-radius:12px;
+            font-size:15px;
+            transition:0.2s;
+        }
+
+        .search-input input:focus{
+            border-color:#059669;
+            outline:none;
+            box-shadow:0 0 0 4px rgba(24,95,165,0.1);
+        }
+
+        .search-btn{
+            background:#059669;
+            color:white;
+            border:none;
+            padding:14px 22px;
+            border-radius:12px;
+            font-size:15px;
+            font-weight:600;
+            cursor:pointer;
+            display:flex;
+            align-items:center;
+            gap:8px;
+            transition:0.2s;
+        }
+
+        .search-btn:hover{
+            background:#1C2B2B;
+        }
+
+        .results-card{
+            background:white;
+            border-radius:18px;
+            padding:30px;
+            box-shadow:0 8px 30px rgba(0,0,0,0.08);
+            overflow-x:auto;
+        }
+
+        .results-title{
+            color:#1C2B2B;
+            margin-bottom:20px;
+            font-size:24px;
+        }
+
+        table{
+            width:100%;
+            border-collapse:collapse;
+            min-width:1300px;
+        }
+
+        thead{
+            background:#1C2B2B;
+            color:white;
+        }
+
+        th{
+            padding:15px;
+            text-align:left;
+            font-size:14px;
+            white-space:nowrap;
+        }
+
+        td{
+            padding:14px;
+            border-bottom:1px solid #e2e8f0;
+            font-size:14px;
+            color:#334155;
+            vertical-align:middle;
+        }
+
+        tbody tr:hover{
+            background:#f8fafc;
+        }
+
+        .patient-id{
+            font-weight:600;
+            color:#1C2B2B;
+        }
+
+        .empty-results{
+            text-align:center;
+            padding:40px;
+            color:#64748b;
+        }
+
+        .badge{
+            background:#D1FAE5;
+            color:#065F46;
+            padding:6px 10px;
+            border-radius:30px;
+            font-size:12px;
+            font-weight:600;
+            display:inline-block;
+        }
+
+        .info-box{
+            background:#ECFDF5;
+            border:1px solid #6EE7B7;
+            color:#065F46;
+            padding:18px;
+            border-radius:14px;
+            margin-bottom:25px;
+            line-height:1.7;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="top-actions">
+
+        <a th:href="@{/redirect-dashboard}" class="dashboard-btn">
+            <i class="ti ti-layout-dashboard"></i>
+            Back to Dashboard
+        </a>
+
+    </div>
+
+    <div class="header">
+
+        <h1>
+            <i class="ti ti-search"></i>
+            Search National Patient Records
+        </h1>
+
+        <p>
+            Search patients using ID number, passport number,
+            name, or phone number across the NMAS database.
+        </p>
+
+    </div>
+
+    <div class="info-box">
+
+        <strong>Important:</strong>
+        Always verify patient identity carefully before accessing medical records.
+        Ensure duplicate patient profiles are not created unnecessarily.
+
+    </div>
+
+    <div class="search-card">
+
+        <form th:action="@{/search-records}" method="get" class="search-form">
+
+            <div class="search-input">
+
+                <i class="ti ti-search"></i>
+
+                <input type="text"
+                       name="searchTerm"
+                       placeholder="Search by ID, name, passport, or phone number"
+                       required>
+
+            </div>
+
+            <button type="submit" class="search-btn">
+
+                <i class="ti ti-search"></i>
+                Search Records
+
+            </button>
+
+        </form>
+
+    </div>
+
+    <div class="results-card" th:if="${results != null}">
+
+        <h2 class="results-title">
+            Search Results
+        </h2>
+
+        <table>
+
+            <thead>
+
+            <tr>
+                <th>ID</th>
+                <th>Full Name</th>
+                <th>ID Number</th>
+                <th>Passport</th>
+                <th>Phone</th>
+                <th>Gender</th>
+                <th>Date of Birth</th>
+                <th>Province</th>
+                <th>Registered Facility</th>
+                <th>Action</th>
+            </tr>
+
+            </thead>
+
+            <tbody>
+
+            <tr th:if="${#lists.isEmpty(results)}">
+
+                <td colspan="10">
+
+                    <div class="empty-results">
+
+                        <i class="ti ti-user-search"
+                           style="font-size:48px;"></i>
+
+                        <br><br>
+
+                        No matching patient records found.
+
+                    </div>
+
+                </td>
+
+            </tr>
+
+            <tr th:each="patient : ${results}">
+
+                <td class="patient-id"
+                    th:text="${patient.id}">
+                </td>
+
+                <td th:text="${patient.fullName}"></td>
+
+                <td th:text="${patient.idNumber}"></td>
+
+                <td th:text="${patient.passportNumber}"></td>
+
+                <td th:text="${patient.phoneNumber}"></td>
+
+                <td>
+                    <span class="badge"
+                          th:text="${patient.gender}">
+                    </span>
+                </td>
+
+                <td th:text="${patient.dateOfBirth}"></td>
+
+                <td th:text="${patient.province}"></td>
+
+                <td><span th:text="${patient.registeredFacility != null ? patient.registeredFacility.facilityName : 'Not linked'}"></span></td>
+
+                <td>
+
+                    <a sec:authorize="!hasRole('RECEPTIONIST')" th:href="@{/patients/history/{id}(id=${patient.id})}"
+                       class="dashboard-btn">
+
+                        <i class="ti ti-file-medical"></i>
+                        View Medical History
+
+                    </a>
+
+                </td>
+
+            </tr>
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+</body>
+</html>

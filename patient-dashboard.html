@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Patient Dashboard - NMAS</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+    <style>
+        *{ margin:0; padding:0; box-sizing:border-box; font-family:Arial,sans-serif; }
+        body{ background:#F0FAF5; color:#1A2E1A; }
+        .layout{ display:flex; min-height:100vh; }
+        .sidebar{ width:280px; background:#1C2B2B; color:white; padding:30px 20px; display:flex; flex-direction:column; }
+        .logo{ margin-bottom:40px; }
+        .logo h1{ font-size:28px; margin-bottom:6px; }
+        .logo p{ color:#cbd5e1; font-size:13px; }
+        .menu{ display:flex; flex-direction:column; gap:12px; }
+        .menu a{ text-decoration:none; color:white; padding:14px 16px; border-radius:12px; display:flex; align-items:center; gap:12px; transition:0.2s; font-size:15px; }
+        .menu a:hover{ background:rgba(255,255,255,0.12); }
+        .menu .active{ background:#059669; }
+        .logout{ margin-top:auto; display:flex; flex-direction:column; gap:12px; }
+        .logout a{ text-decoration:none; color:white; padding:14px 16px; border-radius:12px; display:flex; align-items:center; gap:12px; transition:0.2s; font-size:15px; font-weight:600; background:#dc2626; }
+        .logout a:hover{ background:#b91c1c; }
+        .main{ flex:1; padding:35px; overflow-x:hidden; }
+        .topbar{ display:flex; justify-content:space-between; align-items:center; margin-bottom:30px; flex-wrap:wrap; gap:15px; }
+        .topbar h2{ font-size:32px; color:#1C2B2B; }
+        .topbar p{ color:#64748b; margin-top:5px; }
+        .user-box{ background:white; padding:14px 18px; border-radius:14px; box-shadow:0 5px 20px rgba(0,0,0,0.06); display:flex; align-items:center; gap:12px; }
+        .user-icon{ width:45px; height:45px; border-radius:50%; background:#059669; color:white; display:flex; align-items:center; justify-content:center; font-size:20px; }
+        .info-notice{ background:#ECFDF5; border:1px solid #6EE7B7; color:#065F46; padding:18px; border-radius:14px; margin-bottom:30px; line-height:1.7; }
+        .stats-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:20px; margin-bottom:35px; }
+        .card{ background:white; padding:25px; border-radius:18px; box-shadow:0 8px 25px rgba(0,0,0,0.06); }
+        .card-header{ display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; }
+        .card-header i{ font-size:32px; color:#059669; }
+        .card h3{ color:#64748b; font-size:14px; margin-bottom:12px; }
+        .card p{ font-size:34px; font-weight:bold; color:#1C2B2B; }
+        .section-card{ background:white; border-radius:18px; padding:25px; box-shadow:0 8px 25px rgba(0,0,0,0.06); margin-bottom:30px; overflow-x:auto; }
+        .section-title{ color:#1C2B2B; margin-bottom:20px; font-size:22px; display:flex; align-items:center; gap:10px; }
+        table{ width:100%; border-collapse:collapse; min-width:700px; }
+        thead{ background:#1C2B2B; color:white; }
+        th{ padding:13px 14px; text-align:left; font-size:14px; }
+        td{ padding:13px 14px; border-bottom:1px solid #e2e8f0; font-size:14px; vertical-align:top; }
+        tbody tr:hover{ background:#f8fafc; }
+        .badge{ display:inline-block; padding:5px 10px; border-radius:30px; font-size:12px; font-weight:600; }
+        .badge-green{ background:#dcfce7; color:#166534; }
+        .badge-yellow{ background:#fef9c3; color:#854d0e; }
+        .badge-red{ background:#fee2e2; color:#991b1b; }
+        .badge-blue{ background:#dbeafe; color:#1e40af; }
+        .empty-state{ padding:30px; text-align:center; color:#64748b; }
+        /* VIDEO CONSULTATION PANEL */
+        .video-panel{ background:linear-gradient(135deg,#1C2B2B,#0f3d2e); color:white; border-radius:18px; padding:28px; margin-bottom:30px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:20px; }
+        .video-panel-info h3{ font-size:20px; margin-bottom:8px; }
+        .video-panel-info p{ color:#a7f3d0; font-size:14px; line-height:1.6; }
+        .video-btn{ background:#059669; color:white; text-decoration:none; padding:14px 28px; border-radius:12px; font-size:15px; font-weight:700; display:inline-flex; align-items:center; gap:10px; transition:0.2s; border:none; cursor:pointer; }
+        .video-btn:hover{ background:#047857; }
+    
+        /* Fixed-height layout: the green sidebar stays in place (logout always visible); only the white content area scrolls. */
+        html, body { height:100%; overflow:hidden; }
+        .layout { height:100vh; min-height:0; }
+        .sidebar { height:100vh; overflow-y:auto; flex-shrink:0; }
+        .main { height:100vh; overflow-y:auto !important; }
+    </style>
+</head>
+<body>
+<div th:replace="~{fragments/tab-identity-guard :: tabGuard}"></div>
+<div class="layout">
+    <div class="sidebar">
+        <div class="logo">
+            <h1>NMAS</h1>
+            <p>National Medical Access System</p>
+        </div>
+        <div class="menu">
+            <a th:href="@{/patient-dashboard}" class="active">
+                <i class="ti ti-layout-dashboard"></i> My Dashboard
+            </a>
+            <a th:href="@{/patient/profile}">
+                <i class="ti ti-user-circle"></i> My Profile
+            </a>
+            <a th:href="@{/video/my-requests}">
+                <i class="ti ti-video"></i> Video Consultations
+            </a>
+        </div>
+        <div class="logout">
+            <a th:href="@{/logout}"><i class="ti ti-logout"></i> Logout</a>
+        </div>
+    </div>
+
+    <div class="main">
+        <div class="topbar">
+            <div>
+                <h2>Patient Dashboard</h2>
+                <p th:text="${patient != null ? 'Welcome, ' + patient.fullName : 'Your personal health records portal'}">Your personal health records portal</p>
+            </div>
+            <div style="display:flex;align-items:center;gap:14px;">
+                <div th:replace="~{fragments/notification-bell :: notificationBell}"></div>
+                <div class="user-box">
+                    <div class="user-icon"><i class="ti ti-user"></i></div>
+                    <div>
+                        <a th:href="@{/patient/profile}" style="color:inherit;text-decoration:none;"><strong th:text="${patient != null ? patient.fullName : 'Patient'}">Patient</strong></a>
+                        <br><small>NMAS Patient Portal</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div th:if="${successMessage}" style="background:#dcfce7;border:1px solid #86efac;color:#166534;padding:14px 18px;border-radius:10px;margin-bottom:16px;">
+            <i class="ti ti-circle-check"></i> <span th:text="${successMessage}"></span>
+        </div>
+        <div th:if="${errorMessage}" style="background:#fee2e2;border:1px solid #fecaca;color:#991b1b;padding:14px 18px;border-radius:10px;margin-bottom:16px;">
+            <i class="ti ti-alert-circle"></i> <span th:text="${errorMessage}"></span>
+        </div>
+
+        <div class="info-notice">
+            <strong>Confidentiality Notice:</strong>
+            Your medical records are protected under POPIA and national healthcare privacy regulations.
+            Contact your clinic for any record updates or queries.
+        </div>
+
+        <!-- CROSS-FACILITY RECORD ACCESS LOG (informational — access is never blocked) -->
+        <div class="section-card" th:if="${crossFacilityAccessLog != null and !#lists.isEmpty(crossFacilityAccessLog)}"
+             style="border:2px solid #f59e0b;">
+            <h2 class="section-title"><i class="ti ti-shield-lock" style="color:#d97706;"></i> Doctors Who Have Viewed Your Records</h2>
+            <p style="color:#64748b;margin-bottom:16px;">
+                For your safety, doctors can always view your medical history — including in an emergency, at any
+                facility. When a doctor outside your registered facility does, it's logged here and your home
+                facility's admin is notified, so there's always a record of who has accessed your information.
+            </p>
+            <div th:each="req : ${crossFacilityAccessLog}"
+                 style="background:#fffbeb;border:1px solid #fcd34d;border-radius:12px;padding:16px 20px;margin-bottom:12px;">
+                <strong style="color:#1C2B2B;font-size:15px;" th:text="${req.viewerLabel}"></strong>
+                <div style="color:#64748b;font-size:13px;margin-top:2px;"
+                     th:text="${req.viewerDetail} + (${req.requestingFacility} != null ? ' · ' + ${req.requestingFacility.facilityName} : '')"></div>
+                <div style="color:#92400e;font-size:12px;margin-top:8px;"
+                     th:text="'Viewed ' + ${#temporals.format(req.requestedAt, 'dd MMM yyyy HH:mm')}"></div>
+            </div>
+        </div>
+
+        <!-- STATS -->
+        <div class="stats-grid">
+            <div class="card">
+                <div class="card-header"><h3>My Appointments</h3><i class="ti ti-calendar-event"></i></div>
+                <p th:text="${appointments != null ? appointments.size() : 0}">0</p>
+            </div>
+            <div class="card">
+                <div class="card-header"><h3>Consultations</h3><i class="ti ti-stethoscope"></i></div>
+                <p th:text="${consultations != null ? consultations.size() : 0}">0</p>
+            </div>
+            <div class="card">
+                <div class="card-header"><h3>Prescriptions</h3><i class="ti ti-pill"></i></div>
+                <p th:text="${prescriptions != null ? prescriptions.size() : 0}">0</p>
+            </div>
+        </div>
+
+        <!-- VIDEO CONSULTATION PANEL -->
+        <div class="video-panel">
+            <div class="video-panel-info">
+                <h3><i class="ti ti-video" style="margin-right:8px"></i>Virtual Consultation</h3>
+                <p>Connect face-to-face with your doctor from anywhere.<br>
+                Request a video call and your doctor will accept when available.</p>
+            </div>
+            <a th:href="@{/video/my-requests}" class="video-btn">
+                <i class="ti ti-video"></i> Start / View Video Requests
+            </a>
+        </div>
+
+        <!-- APPOINTMENTS -->
+        <div class="section-card">
+            <h2 class="section-title"><i class="ti ti-calendar-event"></i> My Appointments</h2>
+            <p style="color:#64748b;font-size:14px;margin-bottom:14px;">Follow-up and check-up appointments are booked for you by your doctor after a consultation. You will be notified here and by email. For a new problem, visit your facility's reception, or request a video consultation.</p>
+            <table>
+                <thead><tr><th>Date</th><th>Time</th><th>Doctor</th><th>Facility</th><th>Reason</th><th>Status</th><th>Slip</th></tr></thead>
+                <tbody>
+                <tr th:if="${appointments == null or #lists.isEmpty(appointments)}">
+                    <td colspan="7"><div class="empty-state">No appointments found.</div></td>
+                </tr>
+                <tr th:each="a : ${appointments}">
+                    <td th:text="${a.appointmentDate}"></td>
+                    <td th:text="${a.appointmentTime}"></td>
+                    <td th:text="${a.doctor != null ? a.doctor.fullName : 'N/A'}"></td>
+                    <td th:text="${a.facility != null ? a.facility.facilityName : 'N/A'}"></td>
+                    <td th:text="${a.reason}"></td>
+                    <td><span class="badge" th:classappend="${a.status == 'APPROVED' ? 'badge-green' : (a.status == 'PENDING' ? 'badge-yellow' : (a.status == 'REJECTED' ? 'badge-red' : 'badge-blue'))}" th:text="${a.status}"></span>
+                        <span th:if="${a.followUp}" class="badge badge-blue">Follow-up</span></td>
+                    <td>
+                        <a th:href="@{/appointments/{id}/pdf(id=${a.id})}" style="color:#059669;font-weight:700;text-decoration:none;"><i class="ti ti-file-download"></i> PDF</a>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- CONSULTATIONS -->
+        <div class="section-card">
+            <h2 class="section-title"><i class="ti ti-stethoscope"></i> My Consultations</h2>
+            <table>
+                <thead><tr><th>Date</th><th>Symptoms</th><th>Observation</th><th>Assessment</th></tr></thead>
+                <tbody>
+                <tr th:if="${consultations == null or #lists.isEmpty(consultations)}">
+                    <td colspan="4"><div class="empty-state">No consultation records found.</div></td>
+                </tr>
+                <tr th:each="c : ${consultations}">
+                    <td th:text="${c.consultationDate}"></td>
+                    <td th:text="${c.symptoms}"></td>
+                    <td th:text="${c.observation}"></td>
+                    <td th:text="${c.diagnosis}"></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- PRESCRIPTIONS -->
+        <div class="section-card">
+            <h2 class="section-title"><i class="ti ti-pill"></i> My Prescriptions</h2>
+            <table>
+                <thead><tr><th>Date issued</th><th>Rx No. / Issued at</th><th>Medication</th><th>Dosage</th><th>Frequency</th><th>Duration</th><th>Status</th><th>Receipt</th></tr></thead>
+                <tbody>
+                <tr th:if="${prescriptions == null or #lists.isEmpty(prescriptions)}">
+                    <td colspan="8"><div class="empty-state">No prescriptions found.</div></td>
+                </tr>
+                <!-- Structured prescriptions (written via the standard prescription form during
+                     an in-person appointment/consultation) — one row per medication line, since a
+                     single prescription can carry several medications. -->
+                <th:block th:each="rx : ${prescriptions}">
+                    <tr th:each="line, iter : ${rx.medicationLines}">
+                        <td th:text="${rx.prescriptionDate}"></td>
+                        <td><strong th:text="${rx.displayNumber}"></strong><br/><span style="color:#64748b;font-size:12px;" th:text="${rx.issuingFacility != null ? rx.issuingFacility.facilityName : ''}"></span></td>
+                        <td th:text="${line.medication != null ? line.medication.medicationName : '—'}"></td>
+                        <td th:text="${line.dosage}"></td>
+                        <td th:text="${line.frequency}"></td>
+                        <td th:text="${line.duration}"></td>
+                        <td><span class="badge" th:classappend="${rx.status == 'ACTIVE' ? 'badge-green' : 'badge-red'}" th:text="${rx.status}"></span></td>
+                        <td th:if="${iter.first}">
+                            <a th:href="@{/prescriptions/{id}/receipt(id=${rx.id})}" class="badge badge-blue" style="text-decoration:none;">
+                                <i class="ti ti-file-download"></i> PDF
+                            </a>
+                        </td>
+                    </tr>
+                    <!-- Legacy / video-consultation prescriptions — free-text fields stored
+                         directly on the prescription, no medication lines. -->
+                    <tr th:if="${#lists.isEmpty(rx.medicationLines)}">
+                        <td th:text="${rx.prescriptionDate}"></td>
+                        <td><strong th:text="${rx.displayNumber}"></strong><br/><span style="color:#64748b;font-size:12px;" th:text="${rx.issuingFacility != null ? rx.issuingFacility.facilityName : ''}"></span></td>
+                        <td th:text="${rx.medicationName != null ? rx.medicationName : '—'}"></td>
+                        <td th:text="${rx.dosage}"></td>
+                        <td th:text="${rx.frequency}"></td>
+                        <td th:text="${rx.duration}"></td>
+                        <td><span class="badge" th:classappend="${rx.status == 'ACTIVE' ? 'badge-green' : 'badge-red'}" th:text="${rx.status}"></span></td>
+                        <td>
+                            <a th:href="@{/prescriptions/{id}/receipt(id=${rx.id})}" class="badge badge-blue" style="text-decoration:none;">
+                                <i class="ti ti-file-download"></i> PDF
+                            </a>
+                        </td>
+                    </tr>
+                </th:block>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- AIDEN Floating Chatbot Widget -->
+<div th:replace="~{fragments/aiden-widget :: aidenWidget}"></div>
+
+</body>
+</html>

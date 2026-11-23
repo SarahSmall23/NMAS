@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>My Signature - NMAS</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+    <style>
+        *{ margin:0; padding:0; box-sizing:border-box; font-family:Arial,sans-serif; }
+        body{ background:#F0FAF5; color:#1A2E1A; padding:40px 20px; }
+        .wrap{ max-width:720px; margin:0 auto; }
+        .card{ background:white; padding:28px; border-radius:18px; box-shadow:0 8px 25px rgba(0,0,0,0.06); margin-bottom:22px; }
+        h1{ font-size:26px; margin-bottom:6px; } p.sub{ color:#64748b; margin-bottom:22px; line-height:1.6; }
+        canvas{ width:100%; height:200px; border:2px dashed #94a3b8; border-radius:12px; background:#fff; touch-action:none; cursor:crosshair; display:block; }
+        .row{ display:flex; gap:10px; flex-wrap:wrap; margin-top:14px; align-items:center; }
+        button,.btn{ display:inline-flex; align-items:center; gap:8px; border:0; cursor:pointer; background:#059669; color:white; padding:11px 18px; border-radius:10px; font-weight:600; font-size:14px; text-decoration:none; }
+        .btn-grey{ background:#64748b; } .btn-red{ background:#dc2626; }
+        .msg{ padding:14px 18px; border-radius:12px; margin-bottom:18px; }
+        .ok{ background:#ECFDF5; border:1px solid #6EE7B7; color:#065F46; } .err{ background:#FEF2F2; border:1px solid #FCA5A5; color:#991B1B; }
+        .current{ border:1px solid #e2e8f0; border-radius:12px; padding:14px; background:#fff; text-align:center; }
+        .current img{ max-width:100%; max-height:140px; }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <a th:href="@{/doctor-dashboard}" style="color:#059669;text-decoration:none;font-weight:600;"><i class="ti ti-arrow-left"></i> Back to dashboard</a>
+    <h1 style="margin-top:14px;">My Digital Signature</h1>
+    <p class="sub">Your signature is stored once and stamped automatically on every prescription and follow-up appointment proof you issue.</p>
+
+    <div th:if="${signatureSaved}" class="msg ok" th:text="${signatureSaved}"></div>
+    <div th:if="${signatureError}" class="msg err" th:text="${signatureError}"></div>
+
+    <div class="card" th:if="${signatureData != null}">
+        <strong>Current signature</strong>
+        <div class="current" style="margin-top:12px;"><img th:src="${signatureData}" alt="Current signature"></div>
+        <form th:action="@{/doctor/signature/remove}" method="post" style="margin-top:12px;">
+            <button type="submit" class="btn-red"><i class="ti ti-trash"></i> Remove signature</button>
+        </form>
+    </div>
+
+    <div class="card">
+        <strong th:text="${signatureData != null} ? 'Replace signature' : 'Add your signature'">Add your signature</strong>
+        <p class="sub" style="margin:6px 0 14px;">Sign in the box below with your mouse, finger or stylus, or upload an image of your signature.</p>
+        <canvas id="pad"></canvas>
+        <form id="sigForm" th:action="@{/doctor/signature}" method="post">
+            <input type="hidden" name="signatureData" id="signatureData">
+            <div class="row">
+                <button type="submit"><i class="ti ti-device-floppy"></i> Save signature</button>
+                <button type="button" class="btn-grey" id="clearBtn"><i class="ti ti-eraser"></i> Clear</button>
+                <label class="btn btn-grey" for="upload"><i class="ti ti-upload"></i> Upload image</label>
+                <input type="file" id="upload" accept="image/*" style="display:none;">
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+(function(){
+    var c=document.getElementById('pad'), ctx=c.getContext('2d'), drawing=false, dirty=false;
+    function size(){ var r=c.getBoundingClientRect(), d=window.devicePixelRatio||1; c.width=r.width*d; c.height=r.height*d; ctx.scale(d,d); ctx.lineWidth=2.4; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.strokeStyle='#0b1f6b'; }
+    size();
+    function pos(e){ var r=c.getBoundingClientRect(); return {x:e.clientX-r.left,y:e.clientY-r.top}; }
+    c.addEventListener('pointerdown',function(e){ drawing=true; dirty=true; var p=pos(e); ctx.beginPath(); ctx.moveTo(p.x,p.y); c.setPointerCapture(e.pointerId); });
+    c.addEventListener('pointermove',function(e){ if(!drawing) return; var p=pos(e); ctx.lineTo(p.x,p.y); ctx.stroke(); });
+    c.addEventListener('pointerup',function(){ drawing=false; });
+    document.getElementById('clearBtn').onclick=function(){ ctx.clearRect(0,0,c.width,c.height); dirty=false; };
+    document.getElementById('upload').onchange=function(e){
+        var f=e.target.files[0]; if(!f) return; var img=new Image(), u=URL.createObjectURL(f);
+        img.onload=function(){ var r=c.getBoundingClientRect(); ctx.clearRect(0,0,r.width,r.height);
+            var sc=Math.min(r.width/img.width,r.height/img.height); var w=img.width*sc,h=img.height*sc;
+            ctx.drawImage(img,(r.width-w)/2,(r.height-h)/2,w,h); dirty=true; URL.revokeObjectURL(u); };
+        img.src=u;
+    };
+    document.getElementById('sigForm').onsubmit=function(e){
+        if(!dirty){ e.preventDefault(); alert('Please draw or upload your signature first.'); return; }
+        // downscale to keep the stored signature small
+        var out=document.createElement('canvas'); out.width=600; out.height=Math.round(600*c.height/c.width);
+        out.getContext('2d').drawImage(c,0,0,out.width,out.height);
+        document.getElementById('signatureData').value=out.toDataURL('image/png');
+    };
+})();
+</script>
+</body>
+</html>

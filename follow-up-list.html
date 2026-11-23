@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Follow-up Bookings - NMAS</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+    <style>
+        *{ margin:0; padding:0; box-sizing:border-box; font-family:Arial,sans-serif; }
+        html, body{ height:100%; overflow:hidden; }
+        body{ background:#F0FAF5; color:#1A2E1A; }
+        .layout{ display:flex; height:100vh; }
+        .sidebar{ width:280px; background:#1C2B2B; color:white; padding:30px 20px; display:flex; flex-direction:column; flex-shrink:0; height:100vh; overflow-y:auto; }
+        .logo{ margin-bottom:40px; } .logo h1{ font-size:28px; margin-bottom:6px; } .logo p{ color:#cbd5e1; font-size:13px; }
+        .menu{ display:flex; flex-direction:column; gap:12px; }
+        .menu a{ text-decoration:none; color:white; padding:14px 16px; border-radius:12px; display:flex; align-items:center; gap:12px; transition:0.2s; font-size:15px; }
+        .menu a:hover{ background:rgba(255,255,255,0.12); } .menu .active{ background:#059669; }
+        .logout{ margin-top:auto; padding-top:20px; }
+        .logout a{ text-decoration:none; color:white; padding:14px 16px; border-radius:12px; display:flex; align-items:center; gap:12px; font-size:15px; font-weight:600; background:#dc2626; }
+        .main{ flex:1; padding:35px; height:100vh; overflow-y:auto; min-width:0; }
+        .topbar{ margin-bottom:24px; } .topbar h2{ font-size:30px; color:#1C2B2B; } .topbar p{ color:#64748b; margin-top:5px; }
+        .card{ background:white; border-radius:18px; padding:26px; box-shadow:0 8px 25px rgba(0,0,0,0.06); margin-bottom:28px; overflow-x:auto; }
+        .card h3{ font-size:18px; color:#1C2B2B; margin-bottom:16px; display:flex; align-items:center; gap:8px; } .card h3 i{ color:#059669; }
+        table{ width:100%; border-collapse:collapse; font-size:13px; min-width:720px; }
+        th{ background:#1C2B2B; color:white; padding:12px 14px; text-align:left; font-size:12px; text-transform:uppercase; white-space:nowrap; }
+        td{ padding:12px 14px; border-bottom:1px solid #f1f5f9; vertical-align:middle; } tr:hover td{ background:#f8fff9; }
+        .badge{ display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; }
+        .b-wait{ background:#fef9c3; color:#854d0e; } .b-doc{ background:#dbeafe; color:#1e40af; } .b-in{ background:#dcfce7; color:#166534; }
+        .b-done{ background:#f1f5f9; color:#475569; } .b-appt{ background:#f3e8ff; color:#6b21a8; } .b-walk{ background:#ffedd5; color:#9a3412; }
+        .empty{ text-align:center; padding:34px; color:#94a3b8; } .muted{ color:#64748b; font-size:12px; }
+        .btn{ display:inline-flex; align-items:center; gap:6px; background:#059669; color:white; border:none; padding:9px 14px; border-radius:10px; font-size:13px; font-weight:600; cursor:pointer; text-decoration:none; }
+        .btn:hover{ background:#047857; } .btn-red{ background:#dc2626; } .btn-grey{ background:#64748b; }
+        input, select, textarea{ padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:14px; width:100%; }
+        label{ display:block; font-size:12px; font-weight:700; color:#475569; margin-bottom:5px; }
+        .grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:14px; }
+        .alert{ padding:12px 16px; border-radius:10px; margin-bottom:16px; font-size:13px; }
+        .alert-ok{ background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; } .alert-err{ background:#fef2f2; border:1px solid #fecaca; color:#b91c1c; }
+        .note{ background:#fffbeb; border:1px solid #fcd34d; color:#92400e; padding:12px 16px; border-radius:10px; font-size:13px; margin-bottom:20px; }
+        .vit{ display:inline-block; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:3px 8px; margin:2px 4px 2px 0; font-size:12px; }
+        .vit.warn{ background:#fef2f2; border-color:#fecaca; color:#b91c1c; font-weight:700; }
+    </style>
+</head>
+<body>
+<div class="layout">
+    <div class="sidebar">
+        <div class="logo"><h1>NMAS</h1><p>National Medical Access System</p></div>
+        <div class="menu">
+            <a th:href="@{/doctor-dashboard}"><i class="ti ti-layout-dashboard"></i> Dashboard</a>
+            <a th:href="@{/doctor/queue}"><i class="ti ti-users-group"></i> Patient Queue</a>
+            <a th:href="@{/follow-up}" class="active"><i class="ti ti-calendar-plus"></i> Follow-up Bookings</a>
+            <a th:href="@{/appointments}"><i class="ti ti-calendar-event"></i> Appointments</a>
+            <a th:href="@{/search-records}"><i class="ti ti-search"></i> Search Records</a>
+            <a th:href="@{/consultations}"><i class="ti ti-stethoscope"></i> Consultations</a>
+            <a th:href="@{/prescriptions}"><i class="ti ti-pill"></i> Prescriptions</a>
+            <a th:href="@{/availability}"><i class="ti ti-clock"></i> My Availability</a>
+            <a th:href="@{/video/incoming}"><i class="ti ti-video"></i> Video Requests</a>
+        </div>
+        <div class="logout"><a th:href="@{/logout}"><i class="ti ti-logout"></i> Logout</a></div>
+    </div>
+    <div class="main">
+        <div class="topbar">
+            <h2>Follow-up Bookings</h2>
+            <p>Appointments you have booked for patients to come back for a check-up. They go ahead of the walk-in queue.</p>
+        </div>
+        <div th:if="${successMessage}" class="alert alert-ok" th:text="${successMessage}"></div>
+        <div th:if="${errorMessage}" class="alert alert-err" th:text="${errorMessage}"></div>
+        <p style="margin-bottom:18px;"><a th:href="@{/follow-up/book}" class="btn"><i class="ti ti-calendar-plus"></i> Book a follow-up</a></p>
+        <div class="card">
+            <h3><i class="ti ti-calendar-event"></i> My follow-ups</h3>
+            <table>
+                <thead><tr><th>Date</th><th>Time</th><th>Patient</th><th>Reason</th><th>Slip</th></tr></thead>
+                <tbody>
+                <tr th:if="${#lists.isEmpty(followUps)}"><td colspan="5" class="empty">No follow-ups booked yet.</td></tr>
+                <tr th:each="f : ${followUps}">
+                    <td th:text="${f.appointmentDate}"></td>
+                    <td th:text="${f.appointmentTime}"></td>
+                    <td><strong th:text="${f.patient != null ? f.patient.fullName : '-'}"></strong></td>
+                    <td th:text="${f.reason}"></td>
+                    <td><a class="btn btn-grey" th:href="@{/appointments/{id}/pdf(id=${f.id})}"><i class="ti ti-file-download"></i> PDF</a></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</body>
+</html>

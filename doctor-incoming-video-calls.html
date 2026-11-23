@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Incoming Video Calls - NMAS</title>
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+    <style>
+        *{ margin:0; padding:0; box-sizing:border-box; font-family:Arial,sans-serif; }
+        body{ background:#F0FAF5; color:#1A2E1A; padding:35px; }
+        .topbar{ display:flex; justify-content:space-between; align-items:center; margin-bottom:30px; flex-wrap:wrap; gap:15px; }
+        .topbar h2{ font-size:28px; color:#1C2B2B; }
+        .topbar p{ color:#64748b; margin-top:5px; }
+        .back{ margin-bottom:25px; }
+        .btn{ display:inline-flex; align-items:center; gap:8px; text-decoration:none; background:#059669; color:white; padding:11px 16px; border-radius:10px; font-size:13px; font-weight:600; transition:0.2s; }
+        .btn:hover{ background:#047857; }
+        .btn-sec{ background:#1C2B2B; }
+        .btn-sec:hover{ background:#334155; }
+        .btn-sm{ padding:6px 12px; font-size:12px; }
+        .table-card{ background:white; border-radius:18px; box-shadow:0 8px 25px rgba(0,0,0,0.06); overflow:hidden; }
+        table{ width:100%; border-collapse:collapse; font-size:13px; }
+        th{ background:#1C2B2B; color:white; padding:14px 16px; text-align:left; font-size:12px; text-transform:uppercase; }
+        td{ padding:13px 16px; border-bottom:1px solid #f1f5f9; vertical-align:middle; }
+        tr:hover td{ background:#f8fff9; }
+        .badge{ display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; }
+        .badge-requested{ background:#fef9c3; color:#854d0e; }
+        .badge-accepted{ background:#d1fae5; color:#065f46; }
+        .badge-ended{ background:#e0e7ff; color:#3730a3; }
+        .badge-cancelled{ background:#fee2e2; color:#991b1b; }
+        .empty{ text-align:center; padding:60px; color:#94a3b8; }
+        .empty i{ font-size:48px; margin-bottom:15px; display:block; }
+    </style>
+</head>
+<body>
+<div class="back">
+    <a th:href="@{/doctor-dashboard}" class="btn btn-sec">
+        <i class="ti ti-arrow-left"></i> Back to Dashboard
+    </a>
+</div>
+
+<div class="topbar">
+    <div>
+        <h2>Incoming Video Calls</h2>
+        <p>Manage patient video consultation requests</p>
+    </div>
+</div>
+
+<div class="table-card">
+    <div th:if="${#lists.isEmpty(requests)}" class="empty">
+        <i class="ti ti-video-off"></i>
+        No incoming video consultation requests.
+    </div>
+    <table th:if="${!#lists.isEmpty(requests)}">
+        <thead>
+            <tr>
+                <th>Patient</th>
+                <th>Status</th>
+                <th>Requested At</th>
+                <th>Notes</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="req : ${requests}">
+                <td th:text="${req.patient?.fullName}"></td>
+                <td>
+                    <span th:class="'badge badge-' + ${req.status.toLowerCase()}" th:text="${req.status}"></span>
+                </td>
+                <td th:text="${req.requestedAt}"></td>
+                <td th:text="${req.notes}"></td>
+                <td style="display:flex; gap:8px; flex-wrap:wrap;">
+                    <a th:if="${req.status == 'REQUESTED'}"
+                       th:href="@{/video/accept/{id}(id=${req.id})}"
+                       class="btn btn-sm">
+                        <i class="ti ti-check"></i> Accept
+                    </a>
+                    <a th:if="${req.status == 'ACCEPTED'}"
+                       th:href="@{/video/room/{roomId}(roomId=${req.roomId})}"
+                       class="btn btn-sm">
+                        <i class="ti ti-video"></i> Join Room
+                    </a>
+                    <a th:if="${req.status == 'ACCEPTED'}"
+                       th:href="@{/video/end/{id}(id=${req.id})}"
+                       class="btn btn-sm"
+                       style="background:#dc2626;"
+                       onclick="return confirm('End this consultation?')">
+                        <i class="ti ti-phone-off"></i> End
+                    </a>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+</body>
+</html>

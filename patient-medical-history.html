@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <title>Patient Medical History - NMAS</title>
+
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+
+    <style>
+
+        *{
+            margin:0;
+            padding:0;
+            box-sizing:border-box;
+            font-family:Arial,sans-serif;
+        }
+
+        body{
+            background:#F0FAF5;
+            padding:40px;
+            color:#1A2E1A;
+        }
+
+        .container{
+            max-width:1600px;
+            margin:auto;
+        }
+
+        .top-actions{
+            margin-bottom:20px;
+        }
+
+        .dashboard-btn{
+            display:inline-flex;
+            align-items:center;
+            gap:8px;
+            text-decoration:none;
+            background:#059669;
+            color:white;
+            padding:12px 18px;
+            border-radius:10px;
+            font-size:14px;
+            font-weight:600;
+            transition:0.2s;
+        }
+
+        .dashboard-btn:hover{
+            background:#1C2B2B;
+        }
+
+        .header{
+            margin-bottom:30px;
+        }
+
+        .header h1{
+            color:#1C2B2B;
+            font-size:34px;
+            margin-bottom:10px;
+        }
+
+        .header p{
+            color:#64748b;
+        }
+
+        .info-box{
+            background:#ECFDF5;
+            border:1px solid #6EE7B7;
+            color:#065F46;
+            padding:18px;
+            border-radius:14px;
+            margin-bottom:25px;
+            line-height:1.7;
+        }
+
+        .profile-card{
+            background:white;
+            border-radius:18px;
+            padding:30px;
+            box-shadow:0 8px 25px rgba(0,0,0,0.06);
+            margin-bottom:20px;
+        }
+        .section-title i{
+            color:#059669;
+            margin-right:8px;
+        }
+
+        .profile-grid{
+            display:grid;
+            grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+            gap:20px;
+        }
+
+        .profile-item{
+            background:#f8fafc;
+            padding:18px;
+            border-radius:12px;
+        }
+
+        .profile-item strong{
+            display:block;
+            color:#1C2B2B;
+            margin-bottom:6px;
+        }
+
+        .section-card{
+            background:white;
+            border-radius:18px;
+            padding:25px;
+            box-shadow:0 8px 25px rgba(0,0,0,0.06);
+            margin-bottom:30px;
+            overflow-x:auto;
+        }
+
+        .section-title{
+            color:#1C2B2B;
+            margin-bottom:20px;
+            font-size:24px;
+        }
+
+        table{
+            width:100%;
+            border-collapse:collapse;
+            min-width:1200px;
+        }
+
+        thead{
+            background:#1C2B2B;
+            color:white;
+        }
+
+        th{
+            padding:14px;
+            text-align:left;
+            font-size:14px;
+        }
+
+        td{
+            padding:14px;
+            border-bottom:1px solid #e2e8f0;
+            font-size:14px;
+            vertical-align:top;
+        }
+
+        tbody tr:hover{
+            background:#f8fafc;
+        }
+
+        .badge{
+            display:inline-block;
+            padding:6px 10px;
+            border-radius:30px;
+            background:#dcfce7;
+            color:#166534;
+            font-size:12px;
+            font-weight:600;
+        }
+
+        .empty-state{
+            padding:35px;
+            text-align:center;
+            color:#64748b;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="top-actions" style="display:flex; gap:12px; flex-wrap:wrap;">
+
+        <a th:href="@{/redirect-dashboard}" class="dashboard-btn">
+            <i class="ti ti-layout-dashboard"></i>
+            Back to Dashboard
+        </a>
+
+        <a sec:authorize="hasAnyRole('DOCTOR','FACILITY_ADMIN','SYSTEM_ADMIN')"
+           th:href="@{/patients/{id}/edit-medical(id=${patient.id})}"
+           class="dashboard-btn" style="background:#1C2B2B;">
+            <i class="ti ti-user-edit"></i>
+            Edit Medical Info
+        </a>
+
+    </div>
+
+    <div class="header">
+
+        <h1>
+            <i class="ti ti-user-heart"></i>
+            Patient Medical History
+        </h1>
+
+        <p>
+            Centralized patient history including consultations,
+            prescriptions, and appointments.
+        </p>
+
+    </div>
+
+    <div class="info-box">
+
+        <strong>Confidentiality Notice:</strong>
+        Patient medical history is confidential and protected
+        under POPIA and healthcare privacy regulations.
+
+    </div>
+
+    <!-- Informational only — cross-facility views are never blocked, just logged and reported to the patient's home facility -->
+    <div th:if="${crossFacilityView}"
+         style="background:#fffbeb;border:1px solid #fcd34d;border-radius:12px;padding:14px 18px;color:#92400e;margin-bottom:20px;">
+        <i class="ti ti-shield-lock"></i>
+        <strong th:text="${patient.fullName}">This patient</strong> is registered at a different facility.
+        This view has been logged and their home facility's admin has been notified (your name, facility and
+        the time of access), to keep an auditable trail of who accesses records across NMAS.
+    </div>
+
+    <!-- WALK-IN / CHECK-IN VISITS (reception + nurse vitals) -->
+    <div class="profile-card" th:if="${walkIns != null and !#lists.isEmpty(walkIns)}">
+        <h2 class="section-title"><i class="ti ti-user-check"></i> Reception Check-ins &amp; Vitals <span style="font-size:12px;color:#64748b;font-weight:400;">(each visit is linked to the facility where reception registered it)</span></h2>
+        <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+            <thead><tr style="text-align:left;background:#f1f5f9;">
+                <th style="padding:10px;">Date</th><th style="padding:10px;">Facility</th><th style="padding:10px;">Came for</th>
+                <th style="padding:10px;">Type</th><th style="padding:10px;">Registered by (reception)</th><th style="padding:10px;">Vitals</th><th style="padding:10px;">Vitals by (nurse)</th><th style="padding:10px;">Seen by</th><th style="padding:10px;">Status</th></tr></thead>
+            <tbody>
+            <tr th:each="w : ${walkIns}" style="border-bottom:1px solid #e2e8f0;">
+                <td style="padding:10px;" th:text="${#temporals.format(w.arrivalTime, 'dd MMM yyyy HH:mm')}"></td>
+                <td style="padding:10px;" th:text="${w.facility.facilityName}"></td>
+                <td style="padding:10px;" th:text="${w.requestedService}"></td>
+                <td style="padding:10px;" th:text="${w.visitType == 'APPOINTMENT' ? 'Booked follow-up' : 'Walk-in'}"></td>
+                <td style="padding:10px;" th:text="${w.registeredBy != null ? w.registeredBy : '—'}"></td>
+                <td style="padding:10px;">
+                    <span th:if="${!w.vitalsRecorded}" style="color:#94a3b8;">Not recorded</span>
+                    <span th:if="${w.bloodPressure != null}" th:text="'BP ' + ${w.bloodPressure} + '  '"></span>
+                    <span th:if="${w.heartRate != null}" th:text="'HR ' + ${w.heartRate} + '  '"></span>
+                    <span th:if="${w.temperature != null}" th:text="'Temp ' + ${w.temperature} + '°C  '"></span>
+                    <span th:if="${w.oxygenSaturation != null}" th:text="'SpO₂ ' + ${w.oxygenSaturation} + '%  '"></span>
+                    <span th:if="${w.bloodGlucose != null}" th:text="'Glucose ' + ${w.bloodGlucose} + '  '"></span>
+                    <span th:if="${w.weightKg != null}" th:text="'Wt ' + ${w.weightKg} + 'kg  '"></span>
+                    <span th:if="${w.heightCm != null}" th:text="'Ht ' + ${w.heightCm} + 'cm  '"></span>
+                    <span th:if="${w.bmi != null}" th:text="'BMI ' + ${w.bmi}"></span>
+                </td>
+                <td style="padding:10px;" th:text="${w.vitalsRecordedBy != null ? w.vitalsRecordedBy : '—'}"></td>
+                <td style="padding:10px;" th:text="${w.assignedDoctor != null ? 'Dr. ' + w.assignedDoctor.fullName : '—'}"></td>
+                <td style="padding:10px;" th:text="${w.status}"></td>
+            </tr>
+            </tbody>
+        </table>
+        </div>
+    </div>
+
+    <!-- PATIENT PROFILE -->
+
+    <div class="profile-card">
+
+        <h2 class="section-title"><i class="ti ti-user"></i> Personal Information</h2>
+        <div class="profile-grid">
+            <div class="profile-item"><strong>Full Name</strong><span th:text="${patient.fullName}">—</span></div>
+            <div class="profile-item"><strong>Date of Birth</strong><span th:text="${patient.dateOfBirth} ?: '—'">—</span></div>
+            <div class="profile-item"><strong>Gender</strong><span th:text="${patient.gender} ?: '—'">—</span></div>
+            <div class="profile-item"><strong>Ethnicity</strong><span th:text="${patient.ethnicity} ?: '—'">—</span></div>
+            <div class="profile-item"><strong>Nationality</strong><span th:text="${patient.nationality} ?: '—'">—</span></div>
+            <div class="profile-item"><strong>ID Number</strong><span th:text="${patient.idNumber} ?: '—'">—</span></div>
+            <div class="profile-item"><strong>Passport Number</strong><span th:text="${patient.passportNumber} ?: '—'">—</span></div>
+            <div class="profile-item"><strong>Account Status</strong><span th:text="${patient.accountStatus}">—</span></div>
+            <div class="profile-item"><strong>Date Registered</strong><span th:text="${patient.dateRegistered}">—</span></div>
+        </div>
+
+    </div>
+
+    <div class="profile-card">
+
+        <h2 class="section-title"><i class="ti ti-phone"></i> Contact Information</h2>
+        <div class="profile-grid">
+            <div class="profile-item"><strong>Email</strong><span th:text="${patient.email} ?: '—'">—</span></div>
+            <div class="profile-item"><strong>Phone Number</strong><span th:text="${patient.phoneNumber} ?: '—'">—</span></div>
+            <div class="profile-item"><strong>Alternative Phone</strong><span th:text="${patient.alternativePhoneNumber} ?: '—'">—</span></div>
+            <div class="profile-item"><strong>Address</strong><span th:text="${patient.address} ?: '—'">—</span></div>
+            <div class="profile-item"><strong>City</strong><span th:text="${patient.city} ?: '—'">—</span></div>
+            <div class="profile-item"><strong>Province</strong><span th:text="${patient.province} ?: '—'">—</span></div>
+            <div class="profile-item"><strong>Postal Code</strong><span th:text="${patient.postalCode} ?: '—'">—</span></div>
+            <div class="profile-item"><strong>Preferred Facility</strong><span th:text="${patient.preferredFacility} ?: '—'">—</span></div>
+        </div>
+
+    </div>
+
+    <div class="profile-card">
+
+        <h2 class="section-title"><i class="ti ti-users"></i> Next of Kin &amp; Emergency Contact</h2>
+        <div class="profile-grid">
+            <div class="profile-item"><strong>Next of Kin Name</strong><span th:text="${patient.nextOfKinName} ?: '—'">—</span></div>
+            <div class="profile-item"><strong>Relationship</strong><span th:text="${patient.nextOfKinRelationship} ?: '—'">—</span></div>
+            <div class="profile-item"><strong>Next of Kin Phone</strong><span th:text="${patient.nextOfKinPhone} ?: '—'">—</span></div>
+            <div class="profile-item"><strong>Emergency Contact Name</strong><span th:text="${patient.emergencyContactName} ?: '—'">—</span></div>
+            <div class="profile-item"><strong>Emergency Contact Phone</strong><span th:text="${patient.emergencyContactPhone} ?: '—'">—</span></div>
+        </div>
+
+    </div>
+
+    <div class="profile-card">
+
+        <h2 class="section-title"><i class="ti ti-heart-rate-monitor"></i> Medical Information</h2>
+        <div class="profile-grid">
+            <div class="profile-item"><strong>Blood Type</strong><span th:text="${patient.bloodType} ?: '—'">—</span></div>
+            <div class="profile-item"><strong>Allergies</strong><span th:text="${patient.allergies} ?: '—'">—</span></div>
+            <div class="profile-item"><strong>Chronic Conditions</strong><span th:text="${patient.chronicConditions} ?: '—'">—</span></div>
+            <div class="profile-item"><strong>Current Medication</strong><span th:text="${patient.currentMedication} ?: '—'">—</span></div>
+            <div class="profile-item"><strong>Past Surgeries</strong><span th:text="${patient.pastSurgeries} ?: '—'">—</span></div>
+            <div class="profile-item"><strong>Disabilities</strong><span th:text="${patient.disabilities} ?: '—'">—</span></div>
+        </div>
+        <div th:if="${patient.medicalNotes}" style="margin-top:16px;">
+            <div class="profile-item" style="background:#f0fdf4;">
+                <strong>Medical Notes</strong>
+                <span th:text="${patient.medicalNotes}">—</span>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="profile-card">
+
+        <h2 class="section-title"><i class="ti ti-id-badge"></i> Medical Aid &amp; Consent</h2>
+        <div class="profile-grid">
+            <div class="profile-item"><strong>Medical Aid Status</strong><span th:text="${patient.medicalAidStatus} ?: '—'">—</span></div>
+            <div class="profile-item"><strong>Medical Aid Provider</strong><span th:text="${patient.medicalAidProvider} ?: '—'">—</span></div>
+            <div class="profile-item"><strong>Medical Aid Number</strong><span th:text="${patient.medicalAidNumber} ?: '—'">—</span></div>
+            <div class="profile-item"><strong>Consent to Store Records</strong>
+                <span th:text="${patient.consentToStoreRecords} ? 'Yes' : 'No'">—</span></div>
+            <div class="profile-item"><strong>Consent to Share Records</strong>
+                <span th:text="${patient.consentToShareRecords} ? 'Yes' : 'No'">—</span></div>
+        </div>
+
+    </div>
+
+    <!-- CONSULTATIONS -->
+
+    <div class="section-card">
+
+        <h2 class="section-title">
+            Doctor Consultations
+        </h2>
+
+        <table>
+
+            <thead>
+
+            <tr>
+                <th>Date</th>
+                <th>Facility</th>
+                <th>Doctor</th>
+                <th>Symptoms</th>
+                <th>Diagnosis</th>
+                <th>Treatment Plan</th>
+                <th>Status</th>
+            </tr>
+
+            </thead>
+
+            <tbody>
+
+            <tr th:if="${#lists.isEmpty(consultations)}">
+
+                <td colspan="7">
+
+                    <div class="empty-state">
+                        No consultation history available.
+                    </div>
+
+                </td>
+
+            </tr>
+
+            <tr th:each="consultation : ${consultations}">
+
+                <td th:text="${consultation.consultationDate}"></td>
+
+                <td th:text="${consultation.appointment != null and consultation.appointment.facility != null ? consultation.appointment.facility.facilityName : (consultation.appointment != null and consultation.appointment.doctor != null and consultation.appointment.doctor.facility != null ? consultation.appointment.doctor.facility.facilityName : '—')}"></td>
+
+                <td th:text="${consultation.appointment != null and consultation.appointment.doctor != null ? 'Dr. ' + consultation.appointment.doctor.fullName : '—'}"></td>
+
+                <td th:text="${consultation.symptoms}"></td>
+
+                <td th:text="${consultation.diagnosis}"></td>
+
+                <td th:text="${consultation.treatmentPlan}"></td>
+
+                <td>
+                    <span class="badge">
+                        Completed
+                    </span>
+                </td>
+
+            </tr>
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+    <!-- PRESCRIPTIONS -->
+
+    <div class="section-card">
+
+        <h2 class="section-title">
+            <i class="ti ti-pill"></i> Prescription Records
+        </h2>
+
+        <div th:if="${#lists.isEmpty(prescriptions)}" class="empty-state">
+            No prescription history available.
+        </div>
+
+        <div th:each="prescription : ${prescriptions}"
+             style="background:#f8fafc; border-radius:14px; padding:20px; margin-bottom:16px; border:1px solid #e2e8f0;">
+
+            <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-bottom:14px;">
+                <span style="font-weight:700; color:#1C2B2B; font-size:15px;">
+                    Rx <span th:text="${prescription.displayNumber}"></span>
+                </span>
+                <span th:if="${prescription.issuingFacility != null}" style="color:#0f766e;font-size:13px;font-weight:600;"
+                      th:text="'Issued at ' + ${prescription.issuingFacility.facilityName}"></span>
+                <span style="font-size:12px;" th:style="${prescription.expired} ? 'font-size:12px;color:#b91c1c;font-weight:700;' : 'font-size:12px;color:#166534;'"
+                      th:text="${prescription.expired} ? ('Expired ' + ${prescription.effectiveValidUntil}) : ('Valid until ' + ${prescription.effectiveValidUntil})"></span>
+                <span style="color:#64748b; font-size:13px;" th:text="${prescription.prescriptionDate}"></span>
+                <span th:if="${prescription.doctor != null}"
+                      style="color:#64748b; font-size:13px;"
+                      th:text="'Dr. ' + ${prescription.doctor.fullName}"></span>
+                <span style="padding:4px 10px; border-radius:20px; font-size:12px; font-weight:600;"
+                      th:classappend="${prescription.status == 'ACTIVE'} ? 'background:#dcfce7; color:#166534;' :
+                                      (${prescription.status == 'COMPLETED'} ? 'background:#dbeafe; color:#1e40af;' :
+                                       'background:#fee2e2; color:#991b1b;')"
+                      th:text="${prescription.status}">ACTIVE</span>
+                <a th:href="@{/prescriptions/{id}/view(id=${prescription.id})}"
+                   style="margin-left:auto; display:inline-flex; align-items:center; gap:5px;
+                          background:#059669; color:white; padding:6px 14px; border-radius:8px;
+                          text-decoration:none; font-size:13px; font-weight:600;">
+                    <i class="ti ti-eye"></i> View Details
+                </a>
+            </div>
+
+            <div th:if="${!#lists.isEmpty(prescription.medicationLines)}"
+                 style="overflow-x:auto;">
+                <table style="min-width:600px;">
+                    <thead>
+                    <tr>
+                        <th>Medication</th>
+                        <th>Dosage</th>
+                        <th>Frequency</th>
+                        <th>Duration</th>
+                        <th>Route</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="line : ${prescription.medicationLines}">
+                        <td>
+                            <strong th:text="${line.medication.medicationName}"></strong>
+                            <span style="color:#64748b; font-size:12px;"
+                                  th:text="' ' + ${line.medication.strength}"></span>
+                        </td>
+                        <td th:text="${line.dosage}"></td>
+                        <td th:text="${line.frequency}"></td>
+                        <td th:text="${line.duration}"></td>
+                        <td th:text="${line.route}"></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div th:if="${#lists.isEmpty(prescription.medicationLines) and prescription.medicationName != null}"
+                 style="color:#64748b; font-size:13px; padding:8px 0;">
+                <i class="ti ti-pill"></i>
+                <span th:text="${prescription.medicationName}"></span>
+                <span th:if="${prescription.dosage != null}" th:text="' · ' + ${prescription.dosage}"></span>
+                <span th:if="${prescription.frequency != null}" th:text="' · ' + ${prescription.frequency}"></span>
+            </div>
+
+            <div th:if="${prescription.instructions != null and !prescription.instructions.isEmpty()}"
+                 style="margin-top:10px; font-size:13px; color:#475569;">
+                <i class="ti ti-notes"></i> <span th:text="${prescription.instructions}"></span>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- APPOINTMENTS -->
+
+    <div class="section-card">
+
+        <h2 class="section-title">
+            Appointment History
+        </h2>
+
+        <table>
+
+            <thead>
+
+            <tr>
+                <th>Date</th>
+                <th>Time</th>
+                <th>Doctor</th>
+                <th>Facility</th>
+                <th>Reason</th>
+                <th>Status</th>
+            </tr>
+
+            </thead>
+
+            <tbody>
+
+            <tr th:if="${#lists.isEmpty(appointments)}">
+
+                <td colspan="6">
+
+                    <div class="empty-state">
+                        No appointment history available.
+                    </div>
+
+                </td>
+
+            </tr>
+
+            <tr th:each="appointment : ${appointments}">
+
+                <td th:text="${appointment.appointmentDate}"></td>
+
+                <td th:text="${appointment.appointmentTime}"></td>
+
+                <td th:text="${appointment.doctor != null ? appointment.doctor.fullName : 'N/A'}"></td>
+
+                <td th:text="${appointment.facility != null ? appointment.facility.facilityName : 'N/A'}"></td>
+
+                <td th:text="${appointment.reason}"></td>
+
+                <td>
+                    <span class="badge"
+                          th:text="${appointment.status}">
+                    </span>
+                </td>
+
+            </tr>
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+    <!-- FACILITY / WALK-IN VISITS -->
+
+    <div class="section-card" th:if="${visits != null and !#lists.isEmpty(visits)}">
+
+        <h2 class="section-title">
+            Earlier clinic visit notes <span style="font-size:12px;color:#64748b;font-weight:400;">(recorded before the reception check-in flow)</span>
+        </h2>
+
+        <table>
+
+            <thead>
+
+            <tr>
+                <th>Visit Date</th>
+                <th>Symptoms</th>
+                <th>Diagnosis</th>
+                <th>Treatment</th>
+                <th>Notes</th>
+                <th>Status</th>
+            </tr>
+
+            </thead>
+
+            <tbody>
+
+            <tr th:if="${visits == null or #lists.isEmpty(visits)}">
+
+                <td colspan="6">
+
+                    <div class="empty-state">
+                        No walk-in visit history available.
+                    </div>
+
+                </td>
+
+            </tr>
+
+            <tr th:each="visit : ${visits}">
+
+                <td th:text="${visit.visitDateTime}"></td>
+
+                <td th:text="${visit.symptoms}"></td>
+
+                <td th:text="${visit.diagnosis}"></td>
+
+                <td th:text="${visit.treatment}"></td>
+
+                <td th:text="${visit.notes}"></td>
+
+                <td>
+                    <span class="badge"
+                          th:text="${visit.status}">
+                    </span>
+                </td>
+
+            </tr>
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+</body>
+</html>

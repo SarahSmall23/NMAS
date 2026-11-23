@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Prescriptions - NMAS</title>
+
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+
+    <style>
+        *{
+            margin:0;
+            padding:0;
+            box-sizing:border-box;
+            font-family:Arial, sans-serif;
+        }
+
+        body{
+            background:#F0FAF5;
+            padding:40px;
+            color:#1A2E1A;
+        }
+
+        .container{
+            max-width:1500px;
+            margin:auto;
+        }
+
+        .top-actions{
+            margin-bottom:20px;
+        }
+
+        .dashboard-btn{
+            display:inline-flex;
+            align-items:center;
+            gap:8px;
+            text-decoration:none;
+            background:#059669;
+            color:white;
+            padding:12px 18px;
+            border-radius:10px;
+            font-size:14px;
+            font-weight:600;
+        }
+
+        .dashboard-btn:hover{
+            background:#1C2B2B;
+        }
+
+        .header{
+            margin-bottom:30px;
+        }
+
+        .header h1{
+            color:#1C2B2B;
+            font-size:34px;
+            margin-bottom:10px;
+        }
+
+        .header p{
+            color:#64748b;
+        }
+
+        .info-box{
+            background:#ECFDF5;
+            border:1px solid #6EE7B7;
+            color:#065F46;
+            padding:18px;
+            border-radius:14px;
+            margin-bottom:25px;
+            line-height:1.7;
+        }
+
+        .table-card{
+            background:white;
+            border-radius:18px;
+            padding:25px;
+            box-shadow:0 8px 30px rgba(0,0,0,0.08);
+            overflow-x:auto;
+        }
+
+        table{
+            width:100%;
+            border-collapse:collapse;
+            min-width:1200px;
+        }
+
+        thead{
+            background:#1C2B2B;
+            color:white;
+        }
+
+        th{
+            padding:15px;
+            text-align:left;
+            font-size:14px;
+            white-space:nowrap;
+        }
+
+        td{
+            padding:14px;
+            border-bottom:1px solid #e2e8f0;
+            font-size:14px;
+            vertical-align:top;
+        }
+
+        tbody tr:hover{
+            background:#f8fafc;
+        }
+
+        .empty-state{
+            padding:40px;
+            text-align:center;
+            color:#64748b;
+        }
+
+        .badge{
+            padding:6px 10px;
+            border-radius:30px;
+            font-size:12px;
+            font-weight:600;
+            background:#dcfce7;
+            color:#166534;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="top-actions">
+        <a th:href="@{/redirect-dashboard}" class="dashboard-btn">
+            <i class="ti ti-layout-dashboard"></i>
+            Back to Dashboard
+        </a>
+    </div>
+
+    <div class="header">
+        <h1>
+            <i class="ti ti-pill"></i>
+            Prescriptions
+        </h1>
+
+        <p>
+            View medication prescriptions issued during consultations.
+        </p>
+    </div>
+
+    <div class="info-box">
+        <strong>Prescription Notice:</strong>
+        Prescription records must be accurate and handled according to healthcare confidentiality regulations.
+    </div>
+
+    <div class="table-card">
+
+        <table>
+
+            <thead>
+            <tr>
+                <th>Prescription No.</th>
+                <th>Issued by</th>
+                <th>Patient</th>
+                <th>ID Number</th>
+                <th>Medications</th>
+                <th>Date</th>
+                <th>Valid until</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+            </thead>
+
+            <tbody>
+
+            <tr th:if="${#lists.isEmpty(prescriptions)}">
+                <td colspan="9">
+                    <div class="empty-state">
+                        <i class="ti ti-pill-off" style="font-size:48px;"></i>
+                        <br><br>
+                        No prescriptions available.
+                    </div>
+                </td>
+            </tr>
+
+            <tr th:each="prescription : ${prescriptions}">
+
+                <td><strong th:text="${prescription.displayNumber}"></strong></td>
+
+                <td th:text="${prescription.doctor != null ? 'Dr. ' + prescription.doctor.fullName : '—'}"></td>
+
+                <td th:text="${prescription.patient != null ? prescription.patient.fullName : 'Unknown'}"></td>
+
+                <td th:text="${prescription.patient != null ? prescription.patient.idNumber : 'N/A'}"></td>
+
+                <td>
+                    <span th:if="${!#lists.isEmpty(prescription.medicationLines)}"
+                          th:text="${#lists.size(prescription.medicationLines)} + ' medication(s)'"></span>
+                    <span th:if="${#lists.isEmpty(prescription.medicationLines) and prescription.medicationName != null}"
+                          th:text="${prescription.medicationName}"></span>
+                    <span th:if="${#lists.isEmpty(prescription.medicationLines) and prescription.medicationName == null}"
+                          style="color:#94a3b8;">—</span>
+                </td>
+
+                <td th:text="${prescription.prescriptionDate}"></td>
+
+                <td><span th:text="${prescription.effectiveValidUntil}"></span>
+                    <span th:if="${prescription.expired}" style="color:#b91c1c;font-weight:700;font-size:11px;"> EXPIRED</span></td>
+
+                <td>
+                    <span class="badge"
+                          th:classappend="${prescription.status == 'CANCELLED'} ? '; background:#fee2e2; color:#991b1b;' : (${prescription.status == 'COMPLETED'} ? '; background:#dbeafe; color:#1e40af;' : '')"
+                          th:text="${prescription.status}">ACTIVE</span>
+                </td>
+
+                <td>
+                    <a th:href="@{/prescriptions/{id}/view(id=${prescription.id})}"
+                       style="display:inline-flex; align-items:center; gap:5px; background:#059669;
+                              color:white; padding:6px 12px; border-radius:8px; text-decoration:none;
+                              font-size:13px; font-weight:600;">
+                        <i class="ti ti-eye"></i> View
+                    </a>
+                </td>
+
+            </tr>
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+</body>
+</html>

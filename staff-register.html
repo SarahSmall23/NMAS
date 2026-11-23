@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <title>Register Staff - NMAS</title>
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+    <style>
+        *{ margin:0; padding:0; box-sizing:border-box; font-family:Arial,sans-serif; }
+        body{ background:#F0FAF5; color:#1A2E1A; }
+        .layout{ display:flex; min-height:100vh; }
+        .sidebar{ width:280px; background:#1C2B2B; color:white; padding:30px 20px; display:flex; flex-direction:column; flex-shrink:0; }
+        .logo{ margin-bottom:40px; }
+        .logo h1{ font-size:28px; margin-bottom:6px; }
+        .logo p{ color:#cbd5e1; font-size:13px; }
+        .menu{ display:flex; flex-direction:column; gap:12px; }
+        .menu a{ text-decoration:none; color:white; padding:14px 16px; border-radius:12px; display:flex; align-items:center; gap:12px; transition:0.2s; font-size:15px; }
+        .menu a:hover{ background:rgba(255,255,255,0.12); }
+        .menu .active{ background:#059669; }
+        .logout{ margin-top:auto; }
+        .logout a{ text-decoration:none; color:white; padding:14px 16px; border-radius:12px; display:flex; align-items:center; gap:12px; transition:0.2s; font-size:15px; font-weight:600; background:#dc2626; }
+        .logout a:hover{ background:#b91c1c; }
+        .main{ flex:1; padding:35px; overflow-x:auto; }
+        .topbar{ display:flex; justify-content:space-between; align-items:center; margin-bottom:30px; }
+        .topbar h2{ font-size:32px; color:#1C2B2B; }
+        .topbar p{ color:#64748b; margin-top:5px; }
+        .page-grid{ display:grid; grid-template-columns:440px 1fr; gap:28px; align-items:start; }
+        .card{ background:white; border-radius:18px; padding:30px; box-shadow:0 8px 25px rgba(0,0,0,0.06); }
+        .card h3{ font-size:18px; color:#1C2B2B; margin-bottom:22px; display:flex; align-items:center; gap:8px; }
+        .card h3 i{ color:#059669; }
+        .section-label{ font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:#059669; margin:20px 0 14px; padding-bottom:6px; border-bottom:1px solid #d1fae5; }
+        .field{ margin-bottom:16px; }
+        .field-row{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px; }
+        label{ display:block; font-size:13px; font-weight:600; margin-bottom:6px; color:#334155; }
+        input, select{ width:100%; padding:12px 14px; border:1px solid #d1fae5; border-radius:10px; font-size:14px; outline:none; transition:border-color 0.2s; background:white; }
+        input:focus, select:focus{ border-color:#059669; box-shadow:0 0 0 3px rgba(5,150,105,0.1); }
+        .btn{ display:inline-flex; align-items:center; gap:8px; padding:13px 20px; background:#059669; color:white; border:none; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer; transition:0.2s; width:100%; justify-content:center; margin-top:8px; }
+        .btn:hover{ background:#047857; }
+        .alert-success{ background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; padding:14px 16px; border-radius:10px; font-size:13px; margin-bottom:18px; display:flex; align-items:center; gap:8px; }
+        .alert-error{ background:#fef2f2; border:1px solid #fecaca; color:#dc2626; padding:14px 16px; border-radius:10px; font-size:13px; margin-bottom:18px; display:flex; align-items:center; gap:8px; }
+        .table-wrap{ overflow-x:auto; }
+        table{ width:100%; border-collapse:collapse; font-size:13px; min-width:700px; }
+        th{ background:#1C2B2B; color:white; padding:12px 14px; text-align:left; font-size:12px; text-transform:uppercase; white-space:nowrap; }
+        td{ padding:12px 14px; border-bottom:1px solid #f1f5f9; vertical-align:middle; }
+        tr:hover td{ background:#f8fff9; }
+        .badge{ display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; }
+        .badge-nurse{ background:#dbeafe; color:#1e40af; }
+        .badge-pharmacist{ background:#fef9c3; color:#854d0e; }
+        .badge-receptionist{ background:#f3e8ff; color:#6b21a8; }
+        .badge-suspended{ background:#fee2e2; color:#991b1b; }
+        .badge-active{ background:#dcfce7; color:#166534; }
+        .btn-del{ background:none; border:none; color:#dc2626; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:4px; padding:6px 10px; border-radius:8px; transition:background 0.2s; }
+        .btn-del:hover{ background:#fee2e2; }
+        .btn-suspend{ background:none; border:none; color:#d97706; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:4px; padding:6px 10px; border-radius:8px; transition:background 0.2s; }
+        .btn-suspend:hover{ background:#fef3c7; }
+        .btn-unsuspend{ background:none; border:none; color:#059669; cursor:pointer; font-size:13px; display:inline-flex; align-items:center; gap:4px; padding:6px 10px; border-radius:8px; transition:background 0.2s; }
+        .btn-unsuspend:hover{ background:#d1fae5; }
+        .action-group{ display:flex; align-items:center; gap:4px; flex-wrap:wrap; }
+        .empty{ text-align:center; padding:40px; color:#94a3b8; }
+        .text-muted{ color:#94a3b8; font-size:12px; }
+    
+        /* Fixed-height layout: the green sidebar stays in place (logout always visible); only the white content area scrolls. */
+        html, body { height:100%; overflow:hidden; }
+        .layout { height:100vh; min-height:0; }
+        .sidebar { height:100vh; overflow-y:auto; flex-shrink:0; }
+        .main { height:100vh; overflow-y:auto !important; }
+    </style>
+</head>
+<body>
+<div class="layout">
+
+    <div class="sidebar">
+        <div class="logo">
+            <h1>NMAS</h1>
+            <p>National Medical Access System</p>
+        </div>
+        <div class="menu">
+            <a th:href="@{/facility-admin-dashboard}">
+                <i class="ti ti-layout-dashboard"></i> Dashboard
+            </a>
+            <a th:href="@{/facilities/register}" sec:authorize="hasRole('SYSTEM_ADMIN')">
+                <i class="ti ti-building-hospital"></i> Register Facility
+            </a>
+            <a th:href="@{/doctors/register}">
+                <i class="ti ti-user-heart"></i> Register Doctor
+            </a>
+            <a th:href="@{/staff/register}" class="active">
+                <i class="ti ti-users-group"></i> Register Staff
+            </a>
+            <a th:href="@{/patients}">
+                <i class="ti ti-users"></i> All Patients
+            </a>
+            <a th:href="@{/appointments}">
+                <i class="ti ti-calendar-event"></i> Appointments
+            </a>
+            <a th:href="@{/facility/staff}">
+                <i class="ti ti-id-badge-2"></i> Facility Staff
+            </a>
+            <a th:href="@{/facility/access-log}">
+                <i class="ti ti-shield-lock"></i> Record Access Log
+            </a>
+        </div>
+        <div class="logout">
+            <a th:href="@{/logout}">
+                <i class="ti ti-logout"></i> Logout
+            </a>
+        </div>
+    </div>
+
+    <div class="main">
+        <div class="topbar">
+            <div>
+                <h2 th:text="${scopedToFacility == null} ? 'Register Facility Admin' : 'Register Staff'">Register Staff</h2>
+                <p th:if="${scopedToFacility != null}"
+                   th:text="'Managing nurses, pharmacists and receptionists at ' + ${scopedToFacility.facilityName} + ' only.'"></p>
+                <p th:if="${scopedToFacility == null}">Create the login account for a facility administrator</p>
+            </div>
+        </div>
+
+        <div class="page-grid">
+
+            <!-- REGISTRATION FORM -->
+            <div class="card">
+                <h3><i class="ti ti-user-plus"></i> New Staff Account</h3>
+
+                <div th:if="${success}" class="alert-success">
+                    <i class="ti ti-circle-check"></i>
+                    <span th:text="${success}"></span>
+                </div>
+                <div th:if="${error}" class="alert-error">
+                    <i class="ti ti-alert-circle"></i>
+                    <span th:text="${error}"></span>
+                </div>
+
+                <form th:action="@{/staff/register}" method="post">
+
+                    <p class="section-label">Account Details</p>
+
+                    <div class="field">
+                        <label>Role</label>
+                        <select name="role" required>
+                            <option th:if="${scopedToFacility != null}" value="">— Select Role —</option>
+                            <option th:if="${scopedToFacility == null}" value="FACILITY_ADMIN" selected>Facility Administrator</option>
+                            <option th:if="${scopedToFacility != null}" value="NURSE">Nurse</option>
+                            <option th:if="${scopedToFacility != null}" value="PHARMACIST">Pharmacist</option>
+                            <option th:if="${scopedToFacility != null}" value="RECEPTIONIST">Receptionist</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label>Email Address</label>
+                        <input type="email" name="email" placeholder="staff@email.com" required>
+                    </div>
+                    <div class="field">
+                        <label>Password</label>
+                        <input type="password" name="password" placeholder="Set a strong password" required minlength="6">
+                    </div>
+
+                    <p class="section-label">Personal Information</p>
+
+                    <div class="field">
+                        <label>Full Name</label>
+                        <input type="text" name="fullName" placeholder="e.g. Nomsa Dlamini" required>
+                    </div>
+                    <div class="field-row">
+                        <div>
+                            <label>Gender</label>
+                            <select name="gender">
+                                <option value="">— Select —</option>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label>Employee Number</label>
+                            <input type="text" name="employeeNumber" placeholder="e.g. EMP-0042">
+                        </div>
+                    </div>
+                    <div class="field-row">
+                        <div>
+                            <label>Phone Number</label>
+                            <input type="tel" name="phoneNumber" placeholder="e.g. 0712345678">
+                        </div>
+                        <div>
+                            <label>Alternative Phone</label>
+                            <input type="tel" name="alternativePhoneNumber" placeholder="Optional">
+                        </div>
+                    </div>
+
+                    <p class="section-label">Professional Details</p>
+
+                    <div class="field">
+                        <label>Qualification</label>
+                        <input type="text" name="qualification" placeholder="e.g. B.Nursing, B.Pharm">
+                    </div>
+                    <div class="field">
+                        <label>Department</label>
+                        <input type="text" name="department" placeholder="e.g. Emergency, Pharmacy, ICU">
+                    </div>
+                    <div class="field" th:if="${scopedToFacility != null}">
+                        <label>Facility</label>
+                        <div style="padding:10px 14px;border:1px solid #cbd5e1;border-radius:8px;background:#f8fafc;font-size:14px;">
+                            <i class="ti ti-building-hospital"></i>
+                            <span th:text="${scopedToFacility.facilityName} + ' (' + ${scopedToFacility.city} + ')'"></span>
+                            <span class="text-muted"> — staff you register are always assigned here.</span>
+                        </div>
+                    </div>
+                    <div class="field" th:if="${scopedToFacility == null}">
+                        <label>Assign to Facility <span class="text-muted">(optional)</span></label>
+                        <select name="facilityId">
+                            <option value="">— None —</option>
+                            <option th:each="f : ${facilities}"
+                                    th:value="${f.id}"
+                                    th:text="${f.facilityName + ' (' + f.city + ')'}">
+                            </option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn">
+                        <i class="ti ti-user-plus"></i> Create Staff Account
+                    </button>
+                </form>
+            </div>
+
+            <!-- STAFF LIST -->
+            <div class="card">
+                <h3><i class="ti ti-users-group"></i> Registered Staff</h3>
+
+                <div th:if="${#lists.isEmpty(staffList)}" class="empty">
+                    <i class="ti ti-users" style="font-size:40px; display:block; margin-bottom:10px;"></i>
+                    No staff accounts registered yet.
+                </div>
+
+                <div th:if="${!#lists.isEmpty(staffList)}" class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Full Name</th>
+                                <th>Role</th>
+                                <th>Status</th>
+                                <th>Email</th>
+                                <th>Phone</th>
+                                <th>Department</th>
+                                <th>Facility</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="staff : ${staffList}">
+                                <td>
+                                    <strong th:text="${staff.fullName}"></strong>
+                                    <div th:if="${staff.employeeNumber}" class="text-muted" th:text="${staff.employeeNumber}"></div>
+                                </td>
+                                <td>
+                                    <span th:class="'badge badge-' + ${staff.role.toLowerCase()}"
+                                          th:text="${staff.role}"></span>
+                                </td>
+                                <td>
+                                    <span th:if="${suspendedMap[staff.id]}" class="badge badge-suspended">Suspended</span>
+                                    <span th:unless="${suspendedMap[staff.id]}" class="badge badge-active">Active</span>
+                                </td>
+                                <td th:text="${staff.email}"></td>
+                                <td th:text="${staff.phoneNumber ?: '—'}"></td>
+                                <td th:text="${staff.department ?: '—'}"></td>
+                                <td th:text="${staff.facility != null ? staff.facility.facilityName : '—'}"></td>
+                                <td>
+                                    <div class="action-group">
+                                        <!-- Suspend button (shown when active) -->
+                                        <form th:unless="${suspendedMap[staff.id]}"
+                                              th:action="@{/staff/suspend/{id}(id=${staff.id})}" method="post">
+                                            <button type="submit" class="btn-suspend"
+                                                    title="Suspend account"
+                                                    onclick="return confirm('Suspend this account? They will not be able to log in.')">
+                                                <i class="ti ti-lock"></i> Suspend
+                                            </button>
+                                        </form>
+                                        <!-- Unsuspend button (shown when suspended) -->
+                                        <form th:if="${suspendedMap[staff.id]}"
+                                              th:action="@{/staff/unsuspend/{id}(id=${staff.id})}" method="post">
+                                            <button type="submit" class="btn-unsuspend" title="Reactivate account">
+                                                <i class="ti ti-lock-open"></i> Reactivate
+                                            </button>
+                                        </form>
+                                        <!-- Remove button -->
+                                        <form th:action="@{/staff/delete/{id}(id=${staff.id})}" method="post"
+                                              onsubmit="return confirm('Permanently remove this staff account?')">
+                                            <button type="submit" class="btn-del">
+                                                <i class="ti ti-trash"></i> Remove
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+</body>
+</html>

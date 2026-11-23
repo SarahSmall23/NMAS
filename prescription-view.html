@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <title>Prescription Detail - NMAS</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+    <style>
+        *{ margin:0; padding:0; box-sizing:border-box; font-family:Arial,sans-serif; }
+        body{ background:#F0FAF5; padding:40px; color:#1A2E1A; }
+        .container{ max-width:1100px; margin:auto; }
+        .top-actions{ margin-bottom:20px; display:flex; gap:12px; flex-wrap:wrap; }
+        .nav-btn{ display:inline-flex; align-items:center; gap:8px; text-decoration:none;
+            background:#059669; color:white; padding:12px 18px; border-radius:10px;
+            font-size:14px; font-weight:600; transition:0.2s; }
+        .nav-btn:hover{ background:#1C2B2B; }
+        .nav-btn.secondary{ background:#e2e8f0; color:#1A2E1A; }
+        .nav-btn.secondary:hover{ background:#cbd5e1; }
+        .nav-btn.danger{ background:#ef4444; }
+        .nav-btn.danger:hover{ background:#b91c1c; }
+        .header{ margin-bottom:30px; }
+        .header h1{ color:#1C2B2B; font-size:32px; margin-bottom:8px; }
+        .header p{ color:#64748b; }
+        .alert{ padding:14px 18px; border-radius:12px; margin-bottom:20px; font-size:14px; }
+        .alert.success{ background:#ECFDF5; border:1px solid #6EE7B7; color:#065F46; }
+        .card{ background:white; border-radius:18px; padding:28px;
+            box-shadow:0 8px 25px rgba(0,0,0,0.06); margin-bottom:24px; }
+        .card-title{ color:#1C2B2B; font-size:20px; font-weight:700; margin-bottom:18px;
+            display:flex; align-items:center; gap:10px; border-bottom:2px solid #e2e8f0;
+            padding-bottom:12px; }
+        .card-title i{ color:#059669; }
+        .info-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:14px; }
+        .info-item{ background:#f8fafc; padding:14px; border-radius:10px; }
+        .info-item strong{ display:block; color:#64748b; font-size:12px; text-transform:uppercase;
+            letter-spacing:0.5px; margin-bottom:5px; }
+        .info-item span{ font-size:15px; font-weight:600; color:#1C2B2B; }
+        .badge{ display:inline-block; padding:5px 12px; border-radius:20px; font-size:12px; font-weight:700; }
+        .badge.active{ background:#dcfce7; color:#166534; }
+        .badge.completed{ background:#dbeafe; color:#1e40af; }
+        .badge.cancelled{ background:#fee2e2; color:#991b1b; }
+        .badge.general{ background:#f0f9ff; color:#0369a1; }
+        .badge.warning{ background:#fef3c7; color:#92400e; }
+        .badge.follow{ background:#f5f3ff; color:#5b21b6; }
+        .badge.pharmacy{ background:#ecfdf5; color:#065f46; }
+        table{ width:100%; border-collapse:collapse; }
+        thead{ background:#1C2B2B; color:white; }
+        th{ padding:13px 14px; text-align:left; font-size:13px; white-space:nowrap; }
+        td{ padding:13px 14px; border-bottom:1px solid #e2e8f0; font-size:14px; vertical-align:middle; }
+        tbody tr:hover{ background:#f8fafc; }
+        .empty{ padding:30px; text-align:center; color:#64748b; font-size:14px; }
+        .timing-dots{ display:flex; gap:8px; }
+        .dot{ width:10px; height:10px; border-radius:50%; background:#e2e8f0; }
+        .dot.on{ background:#059669; }
+        .form-row{ display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px; margin-bottom:16px; }
+        .form-group label{ display:block; font-size:13px; font-weight:600; color:#334155; margin-bottom:6px; }
+        .form-group select, .form-group textarea, .form-group input[type=text]{
+            width:100%; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px;
+            font-size:14px; background:#fff; }
+        .form-group select:focus, .form-group textarea:focus{
+            border-color:#059669; outline:none; box-shadow:0 0 0 3px rgba(5,150,105,0.1); }
+        .timing-check{ display:flex; gap:20px; flex-wrap:wrap; padding:10px 0; }
+        .timing-check label{ display:flex; align-items:center; gap:7px; font-size:14px;
+            font-weight:500; cursor:pointer; }
+        .timing-check input[type=checkbox]{ width:16px; height:16px; cursor:pointer; }
+        .form-actions{ display:flex; gap:10px; flex-wrap:wrap; margin-top:4px; }
+        .btn{ display:inline-flex; align-items:center; gap:7px; padding:10px 18px; border:none;
+            border-radius:8px; font-size:14px; font-weight:600; cursor:pointer;
+            text-decoration:none; transition:0.2s; }
+        .btn-primary{ background:#059669; color:white; }
+        .btn-primary:hover{ background:#1C2B2B; }
+        .btn-danger{ background:#ef4444; color:white; }
+        .btn-danger:hover{ background:#b91c1c; }
+        .note-card{ background:#f8fafc; border-radius:12px; padding:16px; margin-bottom:12px; }
+        .note-header{ display:flex; align-items:center; gap:10px; margin-bottom:8px; flex-wrap:wrap; }
+        .note-meta{ color:#64748b; font-size:13px; }
+        .note-text{ color:#1C2B2B; font-size:14px; line-height:1.6; }
+        .note-actions{ margin-left:auto; }
+        .add-section{ background:#f0fdf4; border:1px solid #6EE7B7; border-radius:14px;
+            padding:22px; margin-top:8px; }
+        .add-section h3{ color:#065F46; font-size:16px; margin-bottom:16px;
+            display:flex; align-items:center; gap:8px; }
+        .med-info-box{ margin-top:8px; padding:10px 14px; background:#f0fdf4; border:1px solid #bbf7d0;
+            border-radius:10px; font-size:13px; color:#166534; line-height:1.6; }
+        .dosage-hint{ margin-top:8px; padding:9px 12px; background:#fffbeb; border:1px solid #fcd34d;
+            border-radius:8px; font-size:12px; color:#92400e; }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <div class="top-actions">
+        <a th:href="@{/prescriptions}" class="nav-btn secondary">
+            <i class="ti ti-arrow-left"></i> All Prescriptions
+        </a>
+        <a sec:authorize="hasAnyRole('DOCTOR','FACILITY_ADMIN','SYSTEM_ADMIN')"
+           th:href="@{/prescriptions/{id}/edit(id=${prescription.id})}"
+           class="nav-btn secondary">
+            <i class="ti ti-edit"></i> Edit Status
+        </a>
+        <a th:href="@{/patients/history/{pid}(pid=${prescription.patient.id})}" class="nav-btn secondary">
+            <i class="ti ti-user-heart"></i> Patient History
+        </a>
+        <a th:href="@{/prescriptions/{id}/receipt(id=${prescription.id})}" class="nav-btn">
+            <i class="ti ti-file-download"></i> Download PDF Receipt
+        </a>
+        <a th:href="@{/redirect-dashboard}" class="nav-btn secondary">
+            <i class="ti ti-layout-dashboard"></i> Dashboard
+        </a>
+    </div>
+
+    <div th:if="${errorMessage}" class="alert" style="background:#FEF2F2;border:1px solid #FCA5A5;color:#991B1B;font-weight:600;">
+        <i class="ti ti-alert-triangle"></i>
+        <span th:text="${errorMessage}"></span>
+    </div>
+
+    <div th:if="${successMessage}" class="alert success">
+        <i class="ti ti-circle-check"></i>
+        <span th:text="${successMessage}"></span>
+    </div>
+
+    <div class="header">
+        <h1><i class="ti ti-pill"></i> Prescription <span th:text="${prescription.displayNumber}"></span></h1>
+        <p>Issued on <span th:text="${prescription.prescriptionDate}"></span>
+           <span th:if="${prescription.doctor != null}" th:text="' by Dr. ' + ${prescription.doctor.fullName}"></span>
+           <span th:if="${prescription.issuingFacility != null}" th:text="' at ' + ${prescription.issuingFacility.facilityName}"></span></p>
+        <div style="display:inline-block;margin-top:12px;border:3px double #0f766e;border-radius:14px;padding:10px 20px;text-align:center;color:#0f766e;transform:rotate(-2deg);">
+            <div style="font-size:10px;font-weight:700;letter-spacing:1px;">OFFICIALLY ISSUED BY</div>
+            <div style="font-size:16px;font-weight:800;" th:text="${prescription.issuingFacility != null ? prescription.issuingFacility.facilityName : 'NMAS Facility'}"></div>
+            <div style="font-size:12px;" th:text="'Date issued: ' + ${prescription.prescriptionDate}"></div>
+            <div style="font-size:12px;font-weight:700;" th:text="'Valid until: ' + ${prescription.effectiveValidUntil}"></div>
+        </div>
+        <div style="margin-top:10px;font-weight:700;" th:style="${prescription.expired} ? 'margin-top:10px;font-weight:700;color:#b91c1c;' : 'margin-top:10px;font-weight:700;color:#166534;'"
+             th:text="${prescription.expired} ? 'EXPIRED - this prescription can no longer be collected. A new prescription is needed.' : ('Valid for ' + ${prescription.validityDays} + ' days from issue (' + ${prescription.daysLeft} + ' day(s) left to collect).')"></div>
+    </div>
+
+    <!-- HEADER DETAILS -->
+    <div class="card">
+        <div class="card-title"><i class="ti ti-info-circle"></i> Prescription Overview</div>
+        <div class="info-grid">
+            <div class="info-item">
+                <strong>Patient</strong>
+                <span th:text="${prescription.patient.fullName}">—</span>
+            </div>
+            <div class="info-item">
+                <strong>Patient ID Number</strong>
+                <span th:text="${prescription.patient != null ? prescription.patient.idNumber : 'N/A'}">—</span>
+            </div>
+            <div class="info-item" th:if="${prescription.doctor != null}">
+                <strong>Prescribing Doctor</strong>
+                <span th:text="'Dr. ' + ${prescription.doctor.fullName}">—</span>
+            </div>
+            <div class="info-item" th:if="${prescription.doctor != null and prescription.doctor.specialization != null}">
+                <strong>Specialization</strong>
+                <span th:text="${prescription.doctor.specialization}">—</span>
+            </div>
+            <div class="info-item" th:if="${prescription.consultation != null}">
+                <strong>Consultation Date</strong>
+                <span th:text="${prescription.consultation.consultationDate}">—</span>
+            </div>
+            <div class="info-item">
+                <strong>Status</strong>
+                <span class="badge"
+                      th:classappend="${prescription.status == 'ACTIVE'} ? 'active' : (${prescription.status == 'COMPLETED'} ? 'completed' : 'cancelled')"
+                      th:text="${prescription.status}">ACTIVE</span>
+            </div>
+            <div class="info-item" th:if="${prescription.instructions != null and !prescription.instructions.isEmpty()}">
+                <strong>Overall Instructions</strong>
+                <span th:text="${prescription.instructions}">—</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- MEDICATION LINES -->
+    <div class="card">
+        <div class="card-title"><i class="ti ti-pills"></i> Medications</div>
+
+        <div th:if="${#lists.isEmpty(medications)}" class="empty">
+            <i class="ti ti-pill-off" style="font-size:36px;"></i><br><br>
+            No medications added yet.
+        </div>
+
+        <div th:unless="${#lists.isEmpty(medications)}" style="overflow-x:auto;">
+            <table>
+                <thead>
+                <tr>
+                    <th>Medication</th>
+                    <th>Dosage</th>
+                    <th>Frequency</th>
+                    <th>Duration</th>
+                    <th>Route</th>
+                    <th>Meal</th>
+                    <th>Timing</th>
+                    <th>Instructions</th>
+                    <th sec:authorize="hasAnyRole('DOCTOR','FACILITY_ADMIN','SYSTEM_ADMIN')">Remove</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="line : ${medications}">
+                    <td>
+                        <strong th:text="${line.medication.medicationName}">Med</strong><br>
+                        <small style="color:#64748b;" th:text="${line.medication.strength + ' ' + line.medication.dosageForm}"></small>
+                    </td>
+                    <td th:text="${line.dosage}">—</td>
+                    <td th:text="${line.frequency}">—</td>
+                    <td th:text="${line.duration}">—</td>
+                    <td th:text="${line.route}">—</td>
+                    <td th:text="${line.mealInstruction}">—</td>
+                    <td>
+                        <div class="timing-dots">
+                            <div class="dot" th:classappend="${line.morning} ? 'on'" title="Morning"></div>
+                            <div class="dot" th:classappend="${line.afternoon} ? 'on'" title="Afternoon"></div>
+                            <div class="dot" th:classappend="${line.evening} ? 'on'" title="Evening"></div>
+                            <div class="dot" th:classappend="${line.night} ? 'on'" title="Night"></div>
+                        </div>
+                        <small style="color:#64748b; font-size:11px;">M · A · E · N</small>
+                    </td>
+                    <td th:text="${line.instructions} ?: '—'">—</td>
+                    <td sec:authorize="hasAnyRole('DOCTOR','FACILITY_ADMIN','SYSTEM_ADMIN')">
+                        <form th:action="@{/prescriptions/{id}/medications/{lineId}/remove(id=${prescription.id},lineId=${line.id})}"
+                              method="post"
+                              onsubmit="return confirm('Remove this medication from the prescription?')">
+                            <button type="submit" class="btn btn-danger" style="padding:6px 12px; font-size:12px;">
+                                <i class="ti ti-trash"></i> Remove
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ADD MEDICATION FORM (doctors only) -->
+        <div sec:authorize="hasAnyRole('DOCTOR','FACILITY_ADMIN','SYSTEM_ADMIN')" class="add-section" style="margin-top:20px;">
+            <h3><i class="ti ti-plus"></i> Add Medication</h3>
+            <form th:action="@{/prescriptions/{id}/medications/add(id=${prescription.id})}" method="post">
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Medication *</label>
+                        <input type="text" id="medicationSearchInput2" placeholder="🔍 Search medication by name..."
+                               autocomplete="off" oninput="nmasFilterMedicationOptions('medicationSelect2', this.value)"
+                               style="margin-bottom:8px;width:100%;padding:10px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;">
+                        <select name="medicationId" id="medicationSelect2" required
+                                onchange="nmasOnMedicationChange('medicationSelect2','medInfoBox2','dosageInput2','dosageHint2','routeSelect2')">
+                            <option value="">-- Choose from inventory --</option>
+                            <option th:each="inv : ${allMedications}"
+                                    th:value="${inv.medication.id}"
+                                    th:text="${inv.medicationName}
+                                              + (${inv.medication.strength} != null ? ' ' + ${inv.medication.strength} : '')
+                                              + ' — ' + (${inv.medication.dosageForm} ?: 'Medication')
+                                              + ' (stored as ' + (${inv.unit} ?: 'units') + ')'
+                                              + (${inv.expired} ? ' — EXPIRED (not available)' : (${inv.outOfStock} ? ' — OUT OF STOCK (not available)' : (${inv.lowStock} ? ' — low stock' : '')))"
+                                    th:attr="data-strength=${inv.medication.strength ?: ''},
+                                             data-form=${inv.medication.dosageForm ?: ''},
+                                             data-unit=${inv.unit ?: ''},
+                                             data-stock=${inv.quantityInStock},
+                                             data-outofstock=${inv.outOfStock},
+                                             data-expired=${inv.expired}"
+                                    th:disabled="${inv.unavailable}">Medication</option>
+                        </select>
+                        <div id="medInfoBox2" class="med-info-box" style="display:none;"></div>
+                    </div>
+                    <div class="form-group">
+                        <label>Dosage / Quantity *</label>
+                        <input type="text" name="dosage" id="dosageInput2" list="dosageOptions2" required
+                               placeholder="e.g. 500mg, 5ml, 1 tablet, 2 puffs"
+                               oninput="this.dataset.userEdited='true'"/>
+                        <datalist id="dosageOptions2">
+                            <option>100mg</option><option>200mg</option><option>250mg</option>
+                            <option>400mg</option><option>500mg</option><option>750mg</option>
+                            <option>1000mg</option><option>5mg</option><option>10mg</option>
+                            <option>20mg</option><option>25mg</option><option>50mg</option>
+                            <option>1 puff</option><option>2 puffs</option>
+                            <option>5ml</option><option>10ml</option><option>15ml</option>
+                            <option>1 tablet</option><option>2 tablets</option>
+                            <option>1 capsule</option><option>10IU</option><option>100IU/ml</option>
+                            <option>Apply thin layer</option><option>2 drops</option>
+                            <option>1 patch</option><option>1 sachet</option>
+                        </datalist>
+                        <div id="dosageHint2" class="dosage-hint" style="display:none;"></div>
+                    </div>
+                    <div class="form-group">
+                        <label>Frequency *</label>
+                        <select name="frequency" required>
+                            <option value="">-- Select --</option>
+                            <option>Once daily</option><option>Twice daily</option>
+                            <option>Three times daily</option><option>Four times daily</option>
+                            <option>Every 4 hours</option><option>Every 6 hours</option>
+                            <option>Every 8 hours</option><option>Every 12 hours</option>
+                            <option>As needed (PRN)</option><option>Weekly</option>
+                            <option>Stat (once)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Duration *</label>
+                        <select name="duration" required>
+                            <option value="">-- Select --</option>
+                            <option>1 day</option><option>3 days</option><option>5 days</option>
+                            <option>7 days</option><option>10 days</option><option>14 days</option>
+                            <option>1 month</option><option>3 months</option><option>6 months</option>
+                            <option>Ongoing (chronic)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Route *</label>
+                        <select name="route" id="routeSelect2" required onchange="this.dataset.userEdited='true'">
+                            <option value="">-- Select --</option>
+                            <option>Oral</option><option>Intravenous (IV)</option>
+                            <option>Intramuscular (IM)</option><option>Subcutaneous (SC)</option>
+                            <option>Inhaled</option><option>Topical</option>
+                            <option>Sublingual</option><option>Rectal</option>
+                            <option>Nasal</option><option>Ophthalmic</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Meal Instruction *</label>
+                        <select name="mealInstruction" required>
+                            <option value="">-- Select --</option>
+                            <option>Before meals</option><option>With meals</option>
+                            <option>After meals</option><option>On empty stomach</option>
+                            <option>With water</option><option>Not applicable</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label>Timing</label>
+                    <div class="timing-check">
+                        <label><input type="checkbox" name="morning" value="true"> Morning</label>
+                        <label><input type="checkbox" name="afternoon" value="true"> Afternoon</label>
+                        <label><input type="checkbox" name="evening" value="true"> Evening</label>
+                        <label><input type="checkbox" name="night" value="true"> Night</label>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom:16px;">
+                    <label>Line Instructions</label>
+                    <textarea name="instructions" rows="2"
+                              placeholder="Specific instructions for this medication..."></textarea>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="ti ti-plus"></i> Add Medication
+                    </button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+
+    <div th:if="${elsewhereRx != null and !elsewhereRx.isEmpty()}" class="card" style="background:#fffbeb;border:1px solid #fcd34d;">
+        <div class="card-title" style="color:#92400e;">Prescribed at other facilities (last 90 days)</div>
+        <div th:each="r : ${elsewhereRx}" style="font-size:14px;padding:6px 0;border-bottom:1px solid #fde68a;">
+            <strong th:text="${r.displayNumber}"></strong>
+            <span th:text="' - ' + ${r.issuingFacility.facilityName} + ' on ' + ${r.prescriptionDate}"></span>
+            <span th:if="${r.doctor != null}" th:text="' (Dr. ' + ${r.doctor.fullName} + ')'"></span>
+            <div style="color:#64748b;font-size:13px;">
+                <span th:each="m,st : ${r.medicationLines}" th:text="${m.medication.medicationName} + (${st.last} ? '' : ', ')"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- NOTES -->
+    <div class="card">
+        <div class="card-title"><i class="ti ti-notes"></i> Prescription Notes</div>
+
+        <div th:if="${#lists.isEmpty(notes)}" class="empty">
+            <i class="ti ti-note-off" style="font-size:36px;"></i><br><br>
+            No notes on this prescription.
+        </div>
+
+        <div th:each="note : ${notes}" class="note-card">
+            <div class="note-header">
+                <span class="badge"
+                      th:classappend="${note.noteType == 'WARNING'} ? 'warning' : (${note.noteType == 'FOLLOW_UP'} ? 'follow' : (${note.noteType == 'PHARMACY_NOTE'} ? 'pharmacy' : 'general'))"
+                      th:text="${note.noteType}">NOTE</span>
+                <span class="note-meta"
+                      th:text="'Dr. ' + ${note.doctor.fullName} + ' · ' + ${note.createdAt}">Meta</span>
+                <div class="note-actions"
+                     th:if="${note.doctor.email == currentUserEmail}"
+                     sec:authorize="hasRole('DOCTOR')">
+                    <form th:action="@{/prescriptions/{id}/notes/{noteId}/delete(id=${prescription.id},noteId=${note.id})}"
+                          method="post"
+                          onsubmit="return confirm('Delete this note?')">
+                        <button type="submit" class="btn btn-danger" style="padding:5px 10px; font-size:12px;">
+                            <i class="ti ti-trash"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+            <div class="note-text" th:text="${note.noteText}">Note text</div>
+        </div>
+
+        <!-- ADD NOTE FORM (doctors only) -->
+        <div sec:authorize="hasRole('DOCTOR')" class="add-section" style="margin-top:16px;">
+            <h3><i class="ti ti-plus"></i> Add Note</h3>
+            <form th:action="@{/prescriptions/{id}/notes/add(id=${prescription.id})}" method="post">
+                <div class="form-row" style="grid-template-columns:250px 1fr;">
+                    <div class="form-group">
+                        <label>Note Type *</label>
+                        <select name="noteType" required>
+                            <option value="GENERAL_NOTE">General Note</option>
+                            <option value="WARNING">Warning</option>
+                            <option value="FOLLOW_UP">Follow-up</option>
+                            <option value="PHARMACY_NOTE">Pharmacy Note</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Note *</label>
+                        <textarea name="noteText" rows="3" required
+                                  placeholder="Enter your clinical note..."></textarea>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="ti ti-send"></i> Add Note
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</div>
+
+<script>
+/**
+ * Same medication-info behaviour as the "Write Prescription" form — reads
+ * dosage form / strength / storage unit off the selected medication and
+ * shows capacity + a form-specific dosing hint (spoon size for syrups,
+ * mg/mL for injections, puffs for inhalers, etc.), plus a suggested route.
+ */
+function nmasFilterMedicationOptions(selectId, query) {
+    var select = document.getElementById(selectId);
+    var q = query.trim().toLowerCase();
+    Array.from(select.options).forEach(function (opt) {
+        if (!opt.value) return;
+        var match = !q || opt.textContent.toLowerCase().indexOf(q) > -1;
+        opt.hidden = !match;
+    });
+    var selectedOpt = select.options[select.selectedIndex];
+    if (selectedOpt && selectedOpt.hidden) {
+        select.selectedIndex = 0;
+        select.dispatchEvent(new Event('change'));
+    }
+}
+
+function nmasOnMedicationChange(selectId, boxId, dosageInputId, hintId, routeSelectId) {
+    var select = document.getElementById(selectId);
+    var box = document.getElementById(boxId);
+    var dosageInput = document.getElementById(dosageInputId);
+    var hint = document.getElementById(hintId);
+    var routeSelect = routeSelectId ? document.getElementById(routeSelectId) : null;
+    var opt = select.options[select.selectedIndex];
+
+    if (!opt || !opt.value) {
+        box.style.display = 'none';
+        hint.style.display = 'none';
+        return;
+    }
+
+    var form = (opt.getAttribute('data-form') || '').trim();
+    var strength = (opt.getAttribute('data-strength') || '').trim();
+    var unit = (opt.getAttribute('data-unit') || '').trim();
+    var stock = opt.getAttribute('data-stock');
+    var outOfStock = opt.getAttribute('data-outofstock') === 'true';
+
+    box.style.display = 'block';
+    box.innerHTML =
+        '<strong>' + (form || 'Medication') + '</strong>' +
+        (strength ? ' &middot; Capacity/strength: <strong>' + strength + '</strong>' : '') +
+        (unit ? ' &middot; Stored as: <strong>' + unit + '</strong>' : '') +
+        (stock !== null ? ' &middot; Stock: <strong>' + stock + ' ' + (unit || 'unit(s)').toLowerCase() + '</strong>' : '') +
+        (outOfStock ? ' <span style="color:#dc2626;font-weight:700;">&mdash; OUT OF STOCK</span>' : '');
+
+    if (strength && dosageInput && dosageInput.dataset.userEdited !== 'true') {
+        dosageInput.value = strength;
+    }
+
+    var f = form.toLowerCase();
+    var hintText = '';
+    if (f.indexOf('syrup') > -1 || f.indexOf('suspension') > -1 || f.indexOf('solution') > -1) {
+        hintText = 'Oral liquid — give the dose in mL. As a guide: 5mL \u2248 1 teaspoon, 15mL \u2248 1 tablespoon.';
+    } else if (f.indexOf('injection') > -1 || f.indexOf('vial') > -1 || f.indexOf('ampoule') > -1 || f.indexOf('pen') > -1) {
+        hintText = 'Injectable — give the dose to inject in mg or mL (vial/pen strength: ' + (strength || 'see label') + ').';
+    } else if (f.indexOf('cream') > -1 || f.indexOf('ointment') > -1 || f.indexOf('gel') > -1 || f.indexOf('lotion') > -1) {
+        hintText = 'Topical — describe the amount and how often, e.g. "apply a thin layer twice daily".';
+    } else if (f.indexOf('drop') > -1) {
+        hintText = 'Drops — give the number of drops per dose, e.g. "2 drops".';
+    } else if (f.indexOf('inhaler') > -1) {
+        hintText = 'Inhaler — give the number of puffs per dose, e.g. "2 puffs".';
+    } else if (f.indexOf('patch') > -1) {
+        hintText = 'Patch — say how often it is changed, e.g. "1 patch every 72 hours".';
+    } else if (f.indexOf('sachet') > -1) {
+        hintText = 'Sachet — say how many sachets per dose, dissolved as directed.';
+    } else if (f.indexOf('tablet') > -1 || f.indexOf('capsule') > -1 || f.indexOf('caplet') > -1 || f.indexOf('suppository') > -1) {
+        hintText = 'Give the number of tablets/capsules per dose, e.g. "1 tablet" or "2 capsules".';
+    }
+    if (hintText) { hint.style.display = 'block'; hint.textContent = hintText; }
+    else { hint.style.display = 'none'; }
+
+    if (routeSelect && routeSelect.dataset.userEdited !== 'true') {
+        var suggestedRoute = '';
+        if (f.indexOf('tablet') > -1 || f.indexOf('capsule') > -1 || f.indexOf('syrup') > -1
+            || f.indexOf('suspension') > -1 || f.indexOf('solution') > -1 || f.indexOf('sachet') > -1) {
+            suggestedRoute = 'Oral';
+        } else if (f.indexOf('injection') > -1 || f.indexOf('vial') > -1 || f.indexOf('ampoule') > -1 || f.indexOf('pen') > -1) {
+            suggestedRoute = 'Subcutaneous (SC)';
+        } else if (f.indexOf('cream') > -1 || f.indexOf('ointment') > -1 || f.indexOf('gel') > -1
+                   || f.indexOf('lotion') > -1 || f.indexOf('patch') > -1) {
+            suggestedRoute = 'Topical';
+        } else if (f.indexOf('inhaler') > -1) {
+            suggestedRoute = 'Inhaled';
+        } else if (f.indexOf('drop') > -1 && f.indexOf('eye') > -1) {
+            suggestedRoute = 'Ophthalmic';
+        } else if (f.indexOf('drop') > -1) {
+            suggestedRoute = 'Nasal';
+        } else if (f.indexOf('suppository') > -1) {
+            suggestedRoute = 'Rectal';
+        }
+        if (suggestedRoute) {
+            for (var i = 0; i < routeSelect.options.length; i++) {
+                if (routeSelect.options[i].value === suggestedRoute) { routeSelect.selectedIndex = i; break; }
+            }
+        }
+    }
+}
+</script>
+</body>
+</html>

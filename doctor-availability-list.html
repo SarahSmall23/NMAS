@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>My Availability - NMAS</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+    <style>
+        *{ margin:0; padding:0; box-sizing:border-box; font-family:Arial,sans-serif; }
+        body{ background:#F0FAF5; padding:40px; color:#1A2E1A; }
+        .container{ max-width:1200px; margin:auto; }
+        .top-actions{ margin-bottom:20px; display:flex; gap:12px; flex-wrap:wrap; }
+        .nav-btn{ display:inline-flex; align-items:center; gap:8px; text-decoration:none; background:#059669; color:white; padding:12px 18px; border-radius:10px; font-size:14px; font-weight:600; transition:0.2s; }
+        .nav-btn:hover{ background:#1C2B2B; }
+        .nav-btn.secondary{ background:#e2e8f0; color:#1A2E1A; }
+        .nav-btn.secondary:hover{ background:#cbd5e1; }
+        .header{ margin-bottom:30px; }
+        .header h1{ color:#1C2B2B; font-size:32px; margin-bottom:8px; }
+        .header p{ color:#64748b; }
+        .section-card{ background:white; border-radius:18px; padding:25px; box-shadow:0 8px 25px rgba(0,0,0,0.06); overflow-x:auto; }
+        table{ width:100%; border-collapse:collapse; min-width:700px; }
+        thead{ background:#1C2B2B; color:white; }
+        th{ padding:13px 14px; text-align:left; font-size:14px; }
+        td{ padding:13px 14px; border-bottom:1px solid #e2e8f0; font-size:14px; vertical-align:middle; }
+        tbody tr:hover{ background:#f8fafc; }
+        .badge{ display:inline-block; padding:5px 10px; border-radius:30px; font-size:12px; font-weight:600; }
+        .badge-green{ background:#dcfce7; color:#166534; }
+        .badge-red{ background:#fee2e2; color:#991b1b; }
+        .btn-sm{ display:inline-flex; align-items:center; gap:6px; text-decoration:none; background:#059669; color:white; padding:8px 14px; border-radius:8px; font-size:13px; font-weight:600; transition:0.2s; }
+        .btn-sm:hover{ background:#1C2B2B; }
+        .empty-state{ padding:35px; text-align:center; color:#64748b; }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <div class="top-actions">
+        <a th:href="@{/availability/new}" class="nav-btn">
+            <i class="ti ti-plus"></i> Add Availability
+        </a>
+        <a th:href="@{/doctor-dashboard}" class="nav-btn secondary">
+            <i class="ti ti-layout-dashboard"></i> Dashboard
+        </a>
+    </div>
+
+    <div class="header">
+        <h1><i class="ti ti-clock"></i> My Availability</h1>
+        <p>Manage your shift schedule and view generated appointment slots.</p>
+    </div>
+
+    <div class="section-card">
+
+        <table>
+            <thead>
+            <tr>
+                <th>Date</th>
+                <th>Shift Start</th>
+                <th>Shift End</th>
+                <th>Slot Duration</th>
+                <th>Active</th>
+                <th>Actions</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:if="${#lists.isEmpty(availabilities)}">
+                <td colspan="6">
+                    <div class="empty-state">
+                        No availability records yet.
+                        <a th:href="@{/availability/new}">Add your first shift.</a>
+                    </div>
+                </td>
+            </tr>
+            <tr th:each="av : ${availabilities}">
+                <td th:text="${av.availableDate}"></td>
+                <td th:text="${av.shiftStartTime}"></td>
+                <td th:text="${av.shiftEndTime}"></td>
+                <td>30 min</td>
+                <td>
+                    <span class="badge"
+                          th:classappend="${av.active ? 'badge-green' : 'badge-red'}"
+                          th:text="${av.active ? 'Active' : 'Inactive'}"></span>
+                </td>
+                <td>
+                    <a th:href="@{/availability/{id}/slots(id=${av.id})}" class="btn-sm">
+                        <i class="ti ti-calendar-time"></i> View Slots
+                    </a>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+
+    </div>
+
+</div>
+</body>
+</html>

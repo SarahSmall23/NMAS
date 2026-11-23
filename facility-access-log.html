@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Record Access Log - NMAS</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+    <style>
+        *{ margin:0; padding:0; box-sizing:border-box; font-family:Arial,sans-serif; }
+        html, body{ height:100%; overflow:hidden; }
+        body{ background:#F0FAF5; color:#1A2E1A; }
+        .layout{ display:flex; height:100vh; }
+        .sidebar{ width:280px; background:#1C2B2B; color:white; padding:30px 20px; display:flex; flex-direction:column; flex-shrink:0; height:100vh; overflow-y:auto; }
+        .logo{ margin-bottom:40px; }
+        .logo h1{ font-size:28px; margin-bottom:6px; }
+        .logo p{ color:#cbd5e1; font-size:13px; }
+        .menu{ display:flex; flex-direction:column; gap:12px; }
+        .menu a{ text-decoration:none; color:white; padding:14px 16px; border-radius:12px; display:flex; align-items:center; gap:12px; transition:0.2s; font-size:15px; }
+        .menu a:hover{ background:rgba(255,255,255,0.12); }
+        .menu .active{ background:#059669; }
+        .logout{ margin-top:auto; padding-top:20px; }
+        .logout a{ text-decoration:none; color:white; padding:14px 16px; border-radius:12px; display:flex; align-items:center; gap:12px; font-size:15px; font-weight:600; background:#dc2626; }
+        .logout a:hover{ background:#b91c1c; }
+        .main{ flex:1; padding:35px; height:100vh; overflow-y:auto; min-width:0; }
+        .topbar{ margin-bottom:24px; }
+        .topbar h2{ font-size:30px; color:#1C2B2B; }
+        .topbar p{ color:#64748b; margin-top:5px; }
+        .card{ background:white; border-radius:18px; padding:26px; box-shadow:0 8px 25px rgba(0,0,0,0.06); margin-bottom:28px; overflow-x:auto; }
+        .card h3{ font-size:18px; color:#1C2B2B; margin-bottom:16px; display:flex; align-items:center; gap:8px; }
+        .card h3 i{ color:#059669; }
+        table{ width:100%; border-collapse:collapse; font-size:13px; min-width:720px; }
+        th{ background:#1C2B2B; color:white; padding:12px 14px; text-align:left; font-size:12px; text-transform:uppercase; white-space:nowrap; }
+        td{ padding:12px 14px; border-bottom:1px solid #f1f5f9; vertical-align:middle; }
+        tr:hover td{ background:#f8fff9; }
+        .badge{ display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; }
+        .b-doctor{ background:#dcfce7; color:#166534; } .b-nurse{ background:#dbeafe; color:#1e40af; }
+        .b-pharmacist{ background:#fef9c3; color:#854d0e; } .b-receptionist{ background:#f3e8ff; color:#6b21a8; }
+        .b-susp{ background:#fee2e2; color:#991b1b; } .b-act{ background:#dcfce7; color:#166534; }
+        .act{ display:flex; gap:6px; }
+        .act button{ background:none; border:1px solid #e2e8f0; border-radius:8px; padding:6px 10px; cursor:pointer; font-size:12px; display:inline-flex; align-items:center; gap:4px; }
+        .act .warn{ color:#d97706; } .act .ok{ color:#059669; } .act .del{ color:#dc2626; }
+        .empty{ text-align:center; padding:36px; color:#94a3b8; }
+        .muted{ color:#64748b; font-size:12px; }
+        .note{ background:#fffbeb; border:1px solid #fcd34d; color:#92400e; padding:12px 16px; border-radius:10px; font-size:13px; margin-bottom:20px; }
+        .alert{ padding:12px 16px; border-radius:10px; margin-bottom:16px; font-size:13px; }
+        .alert-ok{ background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; } .alert-err{ background:#fef2f2; border:1px solid #fecaca; color:#b91c1c; }
+    </style>
+</head>
+<body>
+<div class="layout">
+    <div class="sidebar">
+        <div class="logo"><h1>NMAS</h1><p>National Medical Access System</p></div>
+        <div class="menu">
+            <a sec:authorize="hasRole('SYSTEM_ADMIN')" th:href="@{/system-admin-dashboard}"><i class="ti ti-layout-dashboard"></i> Dashboard</a>
+            <a sec:authorize="hasRole('FACILITY_ADMIN')" th:href="@{/facility-admin-dashboard}"><i class="ti ti-layout-dashboard"></i> Dashboard</a>
+            <a th:href="@{/facilities/register}" sec:authorize="hasRole('SYSTEM_ADMIN')"><i class="ti ti-building-hospital"></i> Register Facility</a>
+            <a th:href="@{/doctors}"><i class="ti ti-user-heart"></i> Doctors</a>
+            <a th:href="@{/appointments}"><i class="ti ti-calendar-event"></i> Appointments</a>
+            <a th:href="@{/staff/register}"><i class="ti ti-users-group"></i> Register Staff</a>
+            <a th:href="@{/facility/staff}" ><i class="ti ti-id-badge-2"></i> <span sec:authorize="hasRole('SYSTEM_ADMIN')">All Staff</span><span sec:authorize="hasRole('FACILITY_ADMIN')">Facility Staff</span></a>
+            <a th:href="@{/facility/access-log}" class="active"><i class="ti ti-shield-lock"></i> Record Access Log</a>
+            <a th:href="@{/audit-log}"><i class="ti ti-clipboard-list"></i> Audit Log</a>
+        </div>
+        <div class="logout"><a th:href="@{/logout}"><i class="ti ti-logout"></i> Logout</a></div>
+    </div>
+    <div class="main">
+
+        <div class="topbar">
+            <h2>Cross-Facility Record Access</h2>
+            <p th:if="${national}">Every time a doctor opened the history of a patient registered at a different facility, nationwide. Entries are stored permanently.</p>
+            <p th:if="${!national and facility != null}" th:text="'Every time a doctor from another facility opened the medical history of a patient registered at ' + ${facility.facilityName} + '. Entries are stored permanently.'"></p>
+        </div>
+        <form th:if="${systemAdmin}" th:action="@{/facility/access-log}" method="get" style="margin-bottom:20px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+            <label style="font-weight:700;font-size:13px;"><i class="ti ti-building-hospital"></i> Facility:</label>
+            <select name="facilityId" onchange="this.form.submit()" style="padding:9px 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;min-width:240px;">
+                <option value="">All facilities (national)</option>
+                <option th:each="f : ${facilities}" th:value="${f.id}" th:text="${f.facilityName}" th:selected="${f.id == facilityId}"></option>
+            </select>
+        </form>
+        <div th:if="${(facility == null and !national)}" class="note">Your account isn't linked to a facility yet, so there is nothing to show.</div>
+
+        <div th:if="${(facility != null or national)}">
+            <div class="card">
+                <h3><i class="ti ti-shield-lock"></i> Medical history accessed from other facilities <span class="muted" th:text="'(' + ${#lists.size(accessLog)} + ')'"></span></h3>
+                <table>
+                    <thead><tr><th>Date &amp; time</th><th>Patient</th><th>Doctor</th><th>Specialization</th><th>Doctor's facility</th><th>Patient's facility</th></tr></thead>
+                    <tbody>
+                    <tr th:if="${#lists.isEmpty(accessLog)}"><td colspan="6" class="empty">No cross-facility access recorded yet.</td></tr>
+                    <tr th:each="r : ${accessLog}">
+                        <td th:text="${#temporals.format(r.requestedAt, 'dd MMM yyyy HH:mm:ss')}"></td>
+                        <td><strong th:text="${r.patient.fullName}"></strong></td>
+                        <td th:text="${r.viewerLabel}"></td>
+                        <td th:text="${r.viewerDetail}"></td>
+                        <td th:text="${r.requestingFacility != null ? r.requestingFacility.facilityName : 'Unknown'}"></td>
+                        <td th:text="${r.homeFacility != null ? r.homeFacility.facilityName : 'Unknown'}"></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="card">
+                <h3><i class="ti ti-pill"></i> Medication collected at other facilities <span class="muted" th:text="'(' + ${#lists.size(dispensingLog)} + ')'"></span></h3>
+                <table>
+                    <thead><tr><th>Dispensed</th><th>Patient</th><th>Medication</th><th>Collected at</th></tr></thead>
+                    <tbody>
+                    <tr th:if="${#lists.isEmpty(dispensingLog)}"><td colspan="4" class="empty">None recorded yet.</td></tr>
+                    <tr th:each="o : ${dispensingLog}">
+                        <td th:text="${o.dispensedAt != null ? #temporals.format(o.dispensedAt, 'dd MMM yyyy HH:mm') : '—'}"></td>
+                        <td><strong th:text="${o.patientName}"></strong></td>
+                        <td th:text="${o.medicationName}"></td>
+                        <td th:text="${o.dispensingFacility != null ? o.dispensingFacility.facilityName : 'Another facility'}"></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

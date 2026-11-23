@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Verify OTP - NMAS</title>
+    <style>
+        *{ margin:0; padding:0; box-sizing:border-box; font-family:Arial,sans-serif; }
+        body{ background:#F0FAF5; color:#1A2E1A; display:flex; align-items:center; justify-content:center; min-height:100vh; }
+        .card{ background:white; padding:40px; border-radius:18px; box-shadow:0 8px 30px rgba(0,0,0,0.1); width:100%; max-width:420px; }
+        .logo{ text-align:center; margin-bottom:30px; }
+        .logo h1{ color:#1C2B2B; font-size:28px; }
+        .logo p{ color:#64748b; font-size:13px; margin-top:4px; }
+        h2{ font-size:22px; color:#1C2B2B; margin-bottom:8px; }
+        .subtitle{ color:#64748b; font-size:14px; margin-bottom:25px; line-height:1.6; }
+        .info{ background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; padding:12px 15px; border-radius:10px; font-size:13px; margin-bottom:18px; }
+        .form-group{ margin-bottom:18px; }
+        label{ display:block; font-size:14px; font-weight:600; margin-bottom:6px; }
+        input{ width:100%; padding:12px 14px; border:1px solid #d1fae5; border-radius:10px; font-size:14px; outline:none; transition:border-color 0.2s; }
+        input:focus{ border-color:#059669; }
+        .btn{ width:100%; padding:13px; background:#059669; color:white; border:none; border-radius:10px; font-size:15px; font-weight:600; cursor:pointer; transition:background 0.2s; }
+        .btn:hover{ background:#047857; }
+        .error{ background:#fef2f2; border:1px solid #fecaca; color:#dc2626; padding:12px 15px; border-radius:10px; font-size:13px; margin-bottom:18px; }
+        .back{ text-align:center; margin-top:20px; }
+        .back a{ color:#059669; text-decoration:none; font-size:14px; font-weight:600; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <div class="logo">
+        <h1>NMAS</h1>
+        <p>National Medical Access System</p>
+    </div>
+    <h2>Enter OTP</h2>
+    <p class="subtitle">A 6-digit One-Time PIN has been sent to your email address. It expires in 15 minutes.</p>
+
+    <div class="info">OTP sent to: <strong th:text="${email}">email@example.com</strong></div>
+
+    <div th:if="${error}" class="error" th:text="${error}"></div>
+
+    <form th:action="@{/forgot-password/verify}" method="post">
+        <input type="hidden" name="email" th:value="${email}">
+        <div class="form-group">
+            <label>6-Digit OTP</label>
+            <input type="text" name="otp" placeholder="000000" maxlength="6" required autofocus
+                   style="letter-spacing:8px; font-size:20px; text-align:center;">
+        </div>
+        <button type="submit" class="btn">Verify OTP</button>
+    </form>
+
+    <div class="back">
+        <a th:href="@{/forgot-password}">&#8592; Try a different email</a>
+    </div>
+</div>
+</body>
+</html>

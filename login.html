@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>NMAS Login</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+
+    <style>
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #eaf4ff;
+        }
+
+        .wrap {
+            display: flex;
+            width: 720px;
+            min-height: 520px;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.12);
+        }
+
+        /* Sidebar */
+
+        .side {
+            width: 230px;
+            background: #1C2B2B;
+            padding: 2rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+
+        .side-badge {
+            width: 46px;
+            height: 46px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 12px;
+        }
+
+        .side-badge i {
+            font-size: 24px;
+            color: #fff;
+        }
+
+        .side h1 {
+            font-size: 22px;
+            font-weight: 600;
+            color: #fff;
+            margin: 0 0 4px;
+        }
+
+        .side-subtitle {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.5);
+            line-height: 1.6;
+            margin: 0;
+        }
+
+        .side-links {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .side-link {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.45);
+            text-decoration: none;
+            padding: 7px 10px;
+            border-radius: 8px;
+            transition: background 0.15s, color 0.15s;
+        }
+
+        .side-link:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: rgba(255, 255, 255, 0.75);
+        }
+
+        .side-link.active {
+            background: rgba(255, 255, 255, 0.13);
+            color: #fff;
+        }
+
+        .side-link i {
+            font-size: 16px;
+        }
+
+        .side-foot {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.28);
+            line-height: 1.7;
+        }
+
+        /* Main panel */
+
+        .main {
+            flex: 1;
+            background: #ffffff;
+            padding: 2.5rem 2.25rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .main h2 {
+            font-size: 20px;
+            font-weight: 600;
+            color: #1a202c;
+            margin: 0 0 4px;
+        }
+
+        .main-sub {
+            font-size: 13px;
+            color: #718096;
+            margin: 0 0 1.75rem;
+        }
+
+        /* Fields */
+
+        .field {
+            margin-bottom: 1rem;
+        }
+
+        .field-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+        label {
+            display: block;
+            font-size: 11px;
+            font-weight: 600;
+            color: #4a5568;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+
+        .forgot {
+            font-size: 12px;
+            color: #059669;
+            text-decoration: none;
+        }
+
+        .forgot:hover {
+            text-decoration: underline;
+        }
+
+        .inp-wrap {
+            position: relative;
+        }
+
+        .inp-wrap .ic {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 15px;
+            color: #a0aec0;
+            pointer-events: none;
+        }
+
+        .inp-wrap input {
+            width: 100%;
+            padding: 9px 12px 9px 33px;
+            font-size: 14px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            background: #fff;
+            color: #1a202c;
+            outline: none;
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }
+
+        .inp-wrap input:focus {
+            border-color: #059669;
+            box-shadow: 0 0 0 3px rgba(24, 95, 165, 0.1);
+        }
+
+        .inp-wrap .eye {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #a0aec0;
+            font-size: 15px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+        }
+
+        .inp-wrap .eye:hover {
+            color: #4a5568;
+        }
+
+        /* Buttons */
+
+        .btn-primary {
+            width: 100%;
+            padding: 10px;
+            background: #059669;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            transition: background 0.15s, transform 0.1s;
+        }
+
+        .btn-primary:hover {
+            background: #1C2B2B;
+        }
+
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+
+        .btn-primary i {
+            font-size: 16px;
+        }
+
+        .divider {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 1.25rem 0;
+            color: #a0aec0;
+            font-size: 12px;
+        }
+
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #e2e8f0;
+        }
+
+        .btn-sso {
+            width: 100%;
+            padding: 9px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            background: #fff;
+            color: #1a202c;
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            transition: background 0.15s;
+        }
+
+        .btn-sso:hover {
+            background: #f7fafc;
+        }
+
+        .btn-sso i {
+            font-size: 16px;
+            color: #059669;
+        }
+
+        /* Footer */
+
+        .sec-foot {
+            margin-top: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            color: #a0aec0;
+        }
+
+        .sec-foot i {
+            font-size: 13px;
+        }
+
+        .alert {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 12px 14px;
+            border-radius: 10px;
+            font-size: 13px;
+            line-height: 1.55;
+            margin-bottom: 1.25rem;
+        }
+
+        .alert i { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+
+        .alert-error {
+            background: #fff5f5;
+            border: 1px solid #fed7d7;
+            color: #c53030;
+        }
+
+        .alert-suspended {
+            background: #fffbeb;
+            border: 1px solid #fcd34d;
+            color: #92400e;
+        }
+
+    </style>
+
+</head>
+<body>
+
+<div class="wrap">
+
+    <!-- Sidebar -->
+
+    <div class="side">
+
+        <div>
+            <div class="side-badge">
+                <i class="ti ti-stethoscope"></i>
+            </div>
+
+            <h1>NMAS</h1>
+
+            <p class="side-subtitle">
+                National Medical<br>
+                Access System
+            </p>
+        </div>
+
+        <div class="side-links">
+
+            <a class="side-link active" href="#">
+                <i class="ti ti-lock"></i>
+                Secure login
+            </a>
+
+            <a class="side-link" href="#">
+                <i class="ti ti-help-circle"></i>
+                Help &amp; support
+            </a>
+
+            <a class="side-link" href="#">
+                <i class="ti ti-shield-check"></i>
+                Privacy policy
+            </a>
+
+        </div>
+
+        <div class="side-foot">
+            Ministry of Health<br>
+            Authorised access only<br>
+            v4.2.1
+        </div>
+
+    </div>
+
+    <!-- Main -->
+
+    <div class="main">
+
+        <h2>Welcome back</h2>
+
+        <p class="main-sub">
+            Sign in to your NMAS account
+        </p>
+
+        <!-- Suspended account message -->
+        <div th:if="${param.suspended}" class="alert alert-suspended">
+            <i class="ti ti-lock-exclamation"></i>
+            <div>
+                <strong>Account suspended.</strong><br>
+                Your account has been temporarily suspended.
+                Please contact your Facility Administrator to have it reactivated.
+            </div>
+        </div>
+
+        <!-- Wrong credentials message -->
+        <div th:if="${param.error}" class="alert alert-error">
+            <i class="ti ti-alert-circle"></i>
+            <div>
+                <strong>Login failed.</strong><br>
+                Incorrect email or password. Please try again.
+            </div>
+        </div>
+
+        <form th:action="@{/login}" method="post">
+
+            <div class="field">
+
+                <label for="username">
+                    Email address
+                </label>
+
+                <div class="inp-wrap">
+
+                    <i class="ti ti-mail ic"></i>
+
+                    <input type="text"
+                           id="username"
+                           name="username"
+                           placeholder="you@health.gov"
+                           autocomplete="username"
+                           required>
+
+                </div>
+
+            </div>
+
+            <div class="field" style="margin-bottom: 1.25rem;">
+
+                <div class="field-row">
+
+                    <label for="password">
+                        Password
+                    </label>
+
+                    <a class="forgot" th:href="@{/forgot-password}">
+                        Forgot password?
+                    </a>
+
+                </div>
+
+                <div class="inp-wrap">
+
+                    <i class="ti ti-lock ic"></i>
+
+                    <input type="password"
+                           id="password"
+                           name="password"
+                           placeholder="••••••••"
+                           autocomplete="current-password"
+                           required>
+
+                    <button type="button"
+                            class="eye"
+                            onclick="togglePassword()"
+                            aria-label="Toggle password visibility">
+
+                        <i class="ti ti-eye" id="eye-icon"></i>
+
+                    </button>
+
+                </div>
+
+            </div>
+
+            <button type="submit" class="btn-primary">
+
+                <i class="ti ti-login"></i>
+
+                Sign in
+
+            </button>
+
+        </form>
+
+        <div class="divider">
+            or
+        </div>
+
+        <button type="button" class="btn-sso">
+
+            <i class="ti ti-building-hospital"></i>
+
+            Continue with hospital SSO
+
+        </button>
+
+        <div class="sec-foot">
+
+            <i class="ti ti-shield-lock"></i>
+
+            256-bit encrypted &middot;
+            HIPAA compliant &middot;
+            Session timeout: 15 min
+
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+
+    function togglePassword() {
+
+        const input = document.getElementById('password');
+        const icon = document.getElementById('eye-icon');
+
+        if (input.type === 'password') {
+
+            input.type = 'text';
+            icon.className = 'ti ti-eye-off';
+
+        } else {
+
+            input.type = 'password';
+            icon.className = 'ti ti-eye';
+
+        }
+    }
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Reports - NMAS</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+    <style>
+        *{ margin:0; padding:0; box-sizing:border-box; font-family:Arial,sans-serif; }
+        html, body{ height:100%; overflow:hidden; }
+        body{ background:#F0FAF5; color:#1A2E1A; }
+        .layout{ display:flex; height:100vh; }
+        .sidebar{ width:280px; background:#1C2B2B; color:white; padding:30px 20px; display:flex; flex-direction:column; flex-shrink:0; height:100vh; overflow-y:auto; }
+        .logo{ margin-bottom:40px; } .logo h1{ font-size:28px; margin-bottom:6px; } .logo p{ color:#cbd5e1; font-size:13px; }
+        .menu{ display:flex; flex-direction:column; gap:12px; }
+        .menu a{ text-decoration:none; color:white; padding:14px 16px; border-radius:12px; display:flex; align-items:center; gap:12px; transition:0.2s; font-size:15px; }
+        .menu a:hover{ background:rgba(255,255,255,0.12); } .menu .active{ background:#059669; }
+        .logout{ margin-top:auto; padding-top:20px; }
+        .logout a{ text-decoration:none; color:white; padding:14px 16px; border-radius:12px; display:flex; align-items:center; gap:12px; font-size:15px; font-weight:600; background:#dc2626; }
+        .main{ flex:1; padding:35px; height:100vh; overflow-y:auto; min-width:0; }
+        .topbar{ margin-bottom:22px; } .topbar h2{ font-size:30px; color:#1C2B2B; } .topbar p{ color:#64748b; margin-top:5px; }
+        .card{ background:white; border-radius:18px; padding:24px; box-shadow:0 8px 25px rgba(0,0,0,0.06); margin-bottom:24px; overflow-x:auto; }
+        .card h3{ font-size:17px; color:#1C2B2B; margin-bottom:14px; }
+        table{ width:100%; border-collapse:collapse; font-size:13px; min-width:640px; }
+        th{ background:#1C2B2B; color:white; padding:11px 13px; text-align:left; font-size:12px; text-transform:uppercase; white-space:nowrap; }
+        td{ padding:11px 13px; border-bottom:1px solid #f1f5f9; } tr:hover td{ background:#f8fff9; }
+        .empty{ text-align:center; padding:26px; color:#94a3b8; }
+        .filters{ display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; }
+        .filters label{ display:block; font-size:12px; font-weight:700; color:#475569; margin-bottom:5px; }
+        .filters select, .filters input{ padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:14px; min-width:170px; }
+        .btn{ display:inline-flex; align-items:center; gap:6px; background:#059669; color:white; border:none; padding:10px 16px; border-radius:10px; font-size:13px; font-weight:600; cursor:pointer; text-decoration:none; }
+        .btn:hover{ background:#047857; } .btn-dark{ background:#1C2B2B; } .btn-red{ background:#b91c1c; }
+        .note{ background:#fffbeb; border:1px solid #fcd34d; color:#92400e; padding:12px 16px; border-radius:10px; font-size:13px; margin-bottom:20px; }
+    </style>
+</head>
+<body>
+<div class="layout">
+    <div class="sidebar">
+        <div class="logo"><h1>NMAS</h1><p>National Medical Access System</p></div>
+        <div class="menu">
+            <a sec:authorize="hasRole('PHARMACIST')" th:href="@{/pharmacist-dashboard}"><i class="ti ti-layout-dashboard"></i> Dashboard</a>
+            <a sec:authorize="hasRole('PHARMACIST')" th:href="@{/dispensary}"><i class="ti ti-prescription"></i> Dispensary Queue</a>
+            <a sec:authorize="hasRole('PHARMACIST')" th:href="@{/inventory}"><i class="ti ti-building-warehouse"></i> Inventory</a>
+            <a sec:authorize="hasRole('PHARMACIST')" th:href="@{/inventory/report}" th:classappend="${kind == 'inventory'} ? 'active'"><i class="ti ti-file-analytics"></i> Stock Reports</a>
+
+            <a sec:authorize="hasRole('FACILITY_ADMIN')" th:href="@{/facility-admin-dashboard}"><i class="ti ti-layout-dashboard"></i> Dashboard</a>
+            <a sec:authorize="hasRole('SYSTEM_ADMIN')" th:href="@{/system-admin-dashboard}"><i class="ti ti-layout-dashboard"></i> Dashboard</a>
+            <a sec:authorize="hasAnyRole('FACILITY_ADMIN','SYSTEM_ADMIN')" th:href="@{/facility/reports}" th:classappend="${kind == 'facility'} ? 'active'"><i class="ti ti-report-analytics"></i> Operations Reports</a>
+            <a sec:authorize="hasAnyRole('FACILITY_ADMIN','SYSTEM_ADMIN')" th:href="@{/inventory/report}"><i class="ti ti-file-analytics"></i> Stock Reports</a>
+            <a sec:authorize="hasAnyRole('FACILITY_ADMIN','SYSTEM_ADMIN')" th:href="@{/admin/users}" th:classappend="${kind == 'users'} ? 'active'"><i class="ti ti-users"></i> All Users</a>
+            <a sec:authorize="hasAnyRole('FACILITY_ADMIN','SYSTEM_ADMIN')" th:href="@{/facility/staff}"><i class="ti ti-id-badge-2"></i> Staff</a>
+            <a sec:authorize="hasAnyRole('FACILITY_ADMIN','SYSTEM_ADMIN')" th:href="@{/facility/access-log}"><i class="ti ti-shield-lock"></i> Record Access Log</a>
+            <a sec:authorize="hasAnyRole('FACILITY_ADMIN','SYSTEM_ADMIN')" th:href="@{/audit-log}"><i class="ti ti-clipboard-list"></i> Audit Log</a>
+        </div>
+        <div class="logout"><a th:href="@{/logout}"><i class="ti ti-logout"></i> Logout</a></div>
+    </div>
+
+    <div class="main">
+        <div th:if="${noFacility}" class="note">Your account isn't linked to a facility, so there is nothing to report on.</div>
+
+        <div th:if="${doc != null}">
+            <div class="topbar">
+                <h2 th:text="${doc.title}">Report</h2>
+                <p th:text="${doc.subtitle}"></p>
+            </div>
+
+            <div class="card" th:if="${kind == 'inventory'}">
+                <form method="get" th:action="@{/inventory/report}" class="filters">
+                    <div th:if="${systemAdmin}"><label>Facility</label>
+                        <select name="facilityId">
+                            <option value="">All facilities</option>
+                            <option th:each="f : ${facilities}" th:value="${f.id}" th:text="${f.facilityName}" th:selected="${f.id == facilityId}"></option>
+                        </select></div>
+                    <div><label>Show</label>
+                        <select name="status">
+                            <option th:each="o : ${statusOptions}" th:value="${o.key}" th:text="${o.value}" th:selected="${o.key == status}"></option>
+                        </select></div>
+                    <div><label>Specific medication</label>
+                        <select name="item">
+                            <option value="">All medication</option>
+                            <option th:each="m : ${items}" th:value="${m.id}" th:text="${m.medicationName}" th:selected="${m.id == item}"></option>
+                        </select></div>
+                    <button class="btn" type="submit"><i class="ti ti-filter"></i> Generate</button>
+                </form>
+            </div>
+
+            <div class="card" th:if="${kind == 'users'}">
+                <form method="get" th:action="@{/admin/users}" class="filters">
+                    <div th:if="${systemAdmin}"><label>Facility</label>
+                        <select name="facilityId">
+                            <option value="">All facilities</option>
+                            <option th:each="f : ${facilities}" th:value="${f.id}" th:text="${f.facilityName}" th:selected="${f.id == facilityId}"></option>
+                        </select></div>
+                    <div><label>Role</label>
+                        <select name="role">
+                            <option value="">All roles</option>
+                            <option th:each="r : ${roleOptions}" th:value="${r}" th:text="${r}" th:selected="${r == role}"></option>
+                        </select></div>
+                    <button class="btn" type="submit"><i class="ti ti-filter"></i> Show</button>
+                </form>
+            </div>
+
+            <div class="card" th:if="${kind == 'facility'}">
+                <form method="get" th:action="@{/facility/reports}" class="filters">
+                    <div th:if="${systemAdmin}"><label>Facility</label>
+                        <select name="facilityId">
+                            <option value="">All facilities (national)</option>
+                            <option th:each="f : ${facilities}" th:value="${f.id}" th:text="${f.facilityName}" th:selected="${f.id == facilityId}"></option>
+                        </select></div>
+                    <div><label>From</label><input type="date" name="from" th:value="${from}"/></div>
+                    <div><label>To</label><input type="date" name="to" th:value="${to}"/></div>
+                    <div><label>Find doctor by prescription no.</label><input type="text" name="rx" th:value="${rx}" placeholder="e.g. RX-0327-0004"/></div>
+                    <button class="btn" type="submit"><i class="ti ti-filter"></i> Generate</button>
+                </form>
+            </div>
+
+            <div class="card" th:if="${lookup != null}">
+                <h3 th:text="${lookup.title}"></h3>
+                <table>
+                    <thead><tr><th th:each="h : ${lookup.headers}" th:text="${h}"></th></tr></thead>
+                    <tbody>
+                    <tr th:if="${#lists.isEmpty(lookup.rows)}"><td th:colspan="${#lists.size(lookup.headers)}" class="empty">No prescription with that number was issued at this facility.</td></tr>
+                    <tr th:each="r : ${lookup.rows}"><td th:each="c : ${r}" th:text="${c}"></td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p class="muted" style="margin-bottom:18px;">Each report below has its own PDF and CSV button, so you only download the one you need.</p>
+
+            <div class="card" th:each="s, st : ${doc.sections}">
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
+                    <h3 th:text="${s.title}" style="margin:0;"></h3>
+                    <span style="display:flex;gap:8px;">
+                        <a class="btn btn-red" th:href="${downloadBase + '?format=pdf&section=' + st.index + '&' + query}"><i class="ti ti-file-type-pdf"></i> PDF</a>
+                        <a class="btn btn-dark" th:href="${downloadBase + '?format=csv&section=' + st.index + '&' + query}"><i class="ti ti-file-spreadsheet"></i> CSV</a>
+                    </span>
+                </div>
+                <table>
+                    <thead><tr><th th:each="h : ${s.headers}" th:text="${h}"></th></tr></thead>
+                    <tbody>
+                    <tr th:if="${#lists.isEmpty(s.rows)}"><td th:colspan="${#lists.size(s.headers)}" class="empty">Nothing to show for this selection.</td></tr>
+                    <tr th:each="r : ${s.rows}"><td th:each="c : ${r}" th:text="${c}"></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
