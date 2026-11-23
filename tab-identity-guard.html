@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!--
+  NMAS Tab Identity Guard
+  ========================
+  Browser tabs share cookies, so logging in as a different account in one
+  tab silently switches every OTHER open tab of the same browser to that
+  new identity too — this is what causes "I opened a second tab and my
+  first tab switched to a different dashboard" with no warning at all.
+
+  This fragment can't stop that (it's how browser cookies work), but it
+  makes it visible: each tab remembers who it believed it was (in
+  sessionStorage, which — unlike cookies — IS per-tab), checks against the
+  server on load and periodically, and shows a clear banner the moment
+  those disagree, instead of leaving the switch to happen silently.
+
+  Include with:
+      <div th:replace="~{fragments/tab-identity-guard :: tabGuard}"></div>
+-->
+<div th:fragment="tabGuard" id="tig-root">
+    <style>
+        #tig-banner {
+            display: none; position: fixed; top: 0; left: 0; right: 0; z-index: 99998;
+            background: #fef3c7; border-bottom: 2px solid #f59e0b; color: #78350f;
+            padding: 12px 20px; font-family: Arial, sans-serif; font-size: 13.5px;
+            display: none; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+        }
+        #tig-banner.show { display: flex; }
+        #tig-banner strong { font-weight: 700; }
+        #tig-banner .tig-actions { display: flex; gap: 10px; flex-shrink: 0; }
+        #tig-banner button {
+            border: none; border-radius: 8px; padding: 7px 14px; font-size: 12.5px;
+            font-weight: 600; cursor: pointer;
+        }
+        #tig-reload { background: #f59e0b; color: #fff; }
+        #tig-reload:hover { background: #d97706; }
+        #tig-dismiss { background: transparent; color: #78350f; }
+        #tig-dismiss:hover { text-decoration: underline; }
+    </style>
+
+    <div id="tig-banner">
+        <span>⚠️ <strong>This tab's session changed.</strong> <span id="tig-msg"></span></span>
+        <div class="tig-actions">
+            <button id="tig-reload">Reload this tab</button>
+            <button id="tig-dismiss">Dismiss</button>
+        </div>
+    </div>
+
+    <script th:inline="javascript">
+    (function () {
+        var SERVER_EMAIL = /*[[${currentUser}]]*/ null;
+        var STORAGE_KEY = 'nmasTabIdentityEmail';
+
+        var banner = document.getElementById('tig-banner');
+        var msg = document.getElementById('tig-msg');
+
+        function showBanner(newEmail) {
+            msg.textContent = 'This browser is now logged in as ' + newEmail +
+                ' (likely from another tab). Reload to see the correct dashboard for that account, ' +
+                'or log in again if that wasn\'t you.';
+            banner.classList.add('show');
+        }
+
+        // On load: compare what this tab last knew about itself vs. what the
+        // server actually rendered this page as.
+        if (SERVER_EMAIL) {
+            var remembered = sessionStorage.getItem(STORAGE_KEY);
+            if (remembered && remembered !== SERVER_EMAIL) {
+                showBanner(SERVER_EMAIL);
+            }
+            sessionStorage.setItem(STORAGE_KEY, SERVER_EMAIL);
+        }
+
+        // Periodically check without needing a reload — catches the case
+        // where another tab logs in as someone else WHILE this tab sits open.
+        setInterval(function () {
+            fetch('/api/session/whoami', { credentials: 'same-origin' })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (!data.authenticated) return;
+                    var remembered = sessionStorage.getItem(STORAGE_KEY);
+                    if (remembered && data.email !== remembered) {
+                        showBanner(data.email);
+                    }
+                })
+                .catch(function () {});
+        }, 30000);
+
+        document.getElementById('tig-reload').addEventListener('click', function () {
+            window.location.reload();
+        });
+        document.getElementById('tig-dismiss').addEventListener('click', function () {
+            banner.classList.remove('show');
+        });
+    })();
+    </script>
+</div>
+
+</body>
+</html>

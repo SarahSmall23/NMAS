@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!--
+  AIDEN Floating Chatbot Widget
+  =============================
+  Drop this into any page with:
+      <div th:replace="~{fragments/aiden-widget :: aidenWidget}"></div>
+
+  Ported from the standalone AI-PREDICTOR project's chatbot.xhtml, kept
+  functionally "as-is" (same conversation flow, same doctor-recommendation
+  card, same emergency alert behaviour) but repackaged as a floating button
+  + slide-up panel so it can sit on top of any NMAS page instead of taking
+  up a full page or a fixed dashboard panel.
+
+  Backend: /api/ai/chat/start, /api/ai/chat/message, /api/ai/chat/reset
+  (AidenChatService — runs natively inside NMAS, see that class for details)
+  and /api/ai/emergency-location (logs a captured GPS fix to the audit log).
+-->
+<div th:fragment="aidenWidget" id="aiden-widget-root">
+    <style>
+        #aiden-widget-root, #aiden-widget-root * { box-sizing: border-box; }
+        #aiden-widget-root {
+            --aw-bg: #07101a; --aw-surface: #0c1825; --aw-card: #111f2e;
+            --aw-input-bg: #162334; --aw-teal: #0ecfb8; --aw-teal-dim: rgba(14,207,184,0.15);
+            --aw-teal-glow: rgba(14,207,184,0.30); --aw-blue: #2563eb; --aw-red: #ef4444;
+            --aw-red-dim: rgba(239,68,68,0.15); --aw-amber: #f59e0b; --aw-text: #ddeaf8;
+            --aw-text-dim: #7a9bbf; --aw-text-muted: #3d5a75; --aw-border: rgba(255,255,255,0.08);
+            font-family: 'DM Sans', Arial, sans-serif;
+        }
+
+        /* ── Floating Action Button ── */
+        #aidenFab {
+            position: fixed; bottom: 26px; right: 26px; z-index: 9998;
+            width: 62px; height: 62px; border-radius: 50%; border: none; cursor: pointer;
+            background: linear-gradient(135deg, var(--aw-teal), var(--aw-blue));
+            box-shadow: 0 6px 24px rgba(14,207,184,0.35), 0 2px 8px rgba(0,0,0,0.25);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 28px; transition: transform 0.2s, box-shadow 0.2s;
+        }
+        #aidenFab:hover { transform: scale(1.08); box-shadow: 0 8px 30px rgba(14,207,184,0.5); }
+        #aidenFab .fab-badge {
+            position: absolute; top: -2px; right: -2px; width: 16px; height: 16px; border-radius: 50%;
+            background: var(--aw-red); border: 2px solid #07101a; display: none;
+        }
+        #aidenFab.has-unread .fab-badge { display: block; }
+
+        /* ── Panel ── */
+        #aidenPanel {
+            position: fixed; bottom: 26px; right: 26px; z-index: 9999;
+            width: min(1040px, 94vw); max-width: calc(100vw - 32px); height: min(760px, 90vh); max-height: calc(100vh - 40px);
+            background: var(--aw-bg); color: var(--aw-text); border-radius: 20px;
+            border: 1px solid var(--aw-border); box-shadow: 0 20px 60px rgba(0,0,0,0.45);
+            display: none; flex-direction: column; overflow: hidden;
+        }
+        #aidenPanel.open { display: flex; animation: aw-pop 0.25s cubic-bezier(0.22,1,0.36,1); }
+        @keyframes aw-pop { from { opacity:0; transform: translateY(16px) scale(0.97); } to { opacity:1; transform:none; } }
+
+        #aidenPanel .aw-body { flex: 1; display: flex; min-height: 0; }
+        #aidenPanel .aw-chat-col { flex: 1 1 56%; min-width: 0; display: flex; flex-direction: column; border-right: 1px solid var(--aw-border); }
+        #aidenPanel .aw-report-col {
+            flex: 1 1 44%; min-width: 0; display: flex; flex-direction: column; background: var(--aw-surface);
+        }
+        @media (max-width: 760px) {
+            #aidenPanel { right: 8px; left: 8px; width: auto; bottom: 8px; height: calc(100vh - 16px); }
+            #aidenPanel .aw-body { flex-direction: column; overflow-y: auto; }
+            #aidenPanel .aw-chat-col { border-right: none; border-bottom: 1px solid var(--aw-border); min-height: 55vh; }
+            #aidenPanel .aw-report-col { min-height: 240px; }
+        }
+
+        #aidenPanel header {
+            flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
+            padding: 14px 16px; background: var(--aw-surface); border-bottom: 1px solid var(--aw-border);
+        }
+        #aidenPanel .aw-logo { display: flex; align-items: center; gap: 10px; }
+        #aidenPanel .aw-logo-icon {
+            width: 38px; height: 38px; background: linear-gradient(135deg, var(--aw-teal), var(--aw-blue));
+            border-radius: 11px; display: flex; align-items: center; justify-content: center;
+            font-size: 18px; flex-shrink: 0;
+        }
+        #aidenPanel .aw-logo-text h4 { font-size: 14.5px; font-weight: 700; color: #fff; }
+        #aidenPanel .aw-logo-text p { font-size: 10.5px; color: var(--aw-text-dim); margin-top: 1px; }
+        #aidenPanel .aw-header-actions { display: flex; align-items: center; gap: 8px; }
+        #aidenPanel .aw-icon-btn {
+            background: none; border: 1px solid var(--aw-border); border-radius: 8px; width: 30px; height: 30px;
+            color: var(--aw-text-dim); cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center;
+        }
+        #aidenPanel .aw-icon-btn:hover { border-color: var(--aw-teal); color: var(--aw-teal); }
+
+        /* Language + voice bar */
+        #aidenPanel .aw-tools-bar {
+            flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 8px 14px;
+            background: var(--aw-surface); border-bottom: 1px solid var(--aw-border); flex-wrap: wrap;
+        }
+        #aidenLangSelect {
+            background: var(--aw-input-bg); color: var(--aw-text); border: 1px solid var(--aw-border);
+            border-radius: 8px; padding: 5px 8px; font-size: 11.5px; font-family: inherit; cursor: pointer;
+        }
+        #aidenLangSelect:focus { border-color: var(--aw-teal); outline: none; }
+        .aw-voice-toggle {
+            background: none; border: 1px solid var(--aw-border); border-radius: 8px; padding: 5px 9px;
+            color: var(--aw-text-dim); cursor: pointer; font-size: 11.5px; display: flex; align-items: center; gap: 5px;
+        }
+        .aw-voice-toggle.active { border-color: var(--aw-teal); color: var(--aw-teal); background: var(--aw-teal-dim); }
+        .aw-voice-toggle:disabled { opacity: 0.35; cursor: not-allowed; }
+
+        /* ── Report column ── */
+        #aidenPanel .aw-report-header {
+            flex-shrink: 0; padding: 14px 16px; border-bottom: 1px solid var(--aw-border);
+        }
+        #aidenPanel .aw-report-title { font-size: 14px; font-weight: 700; color: #fff; }
+        #aidenPanel .aw-report-sub { font-size: 10.5px; color: var(--aw-text-dim); margin-top: 2px; }
+        #aidenPanel .aw-report-body { flex: 1; overflow-y: auto; padding: 16px; }
+        #aidenPanel .aw-report-body::-webkit-scrollbar { width: 4px; }
+        #aidenPanel .aw-report-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 10px; }
+        #aidenPanel .aw-report-empty {
+            height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            text-align: center; gap: 10px; color: var(--aw-text-muted); padding: 20px;
+        }
+        #aidenPanel .aw-report-empty-icon { font-size: 34px; opacity: 0.6; }
+        #aidenPanel .aw-report-empty p { font-size: 12px; line-height: 1.6; max-width: 240px; }
+        #aidenPanel .aw-report-disclaimer {
+            flex-shrink: 0; padding: 9px 16px; font-size: 9.5px; color: var(--aw-text-muted);
+            border-top: 1px solid var(--aw-border); text-align: center;
+        }
+
+        .aw-cond-context {
+            font-size: 10.5px; color: var(--aw-teal); background: var(--aw-teal-dim);
+            border: 1px solid var(--aw-teal-glow); border-radius: 8px; padding: 7px 10px; margin-bottom: 14px; line-height: 1.5;
+        }
+        .aw-cond-row { margin-bottom: 16px; animation: aw-pop 0.3s ease; }
+        .aw-cond-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; gap: 8px; }
+        .aw-cond-name { font-size: 13px; font-weight: 700; color: #fff; }
+        .aw-cond-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+        .aw-cond-pct { font-size: 12px; font-weight: 700; flex-shrink: 0; }
+        .aw-cond-pct.risk-high { color: var(--aw-red); }
+        .aw-cond-pct.risk-mod { color: var(--aw-amber); }
+        .aw-cond-pct.risk-low { color: var(--aw-teal); }
+        .aw-cond-tag {
+            font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.4px;
+            padding: 2px 7px; border-radius: 20px; border: 1px solid;
+        }
+        .aw-cond-tag.risk-high { color: #fecaca; background: rgba(239,68,68,0.18); border-color: rgba(239,68,68,0.4); }
+        .aw-cond-tag.risk-mod { color: #fde68a; background: rgba(245,158,11,0.18); border-color: rgba(245,158,11,0.4); }
+        .aw-cond-tag.risk-low { color: #99f6e4; background: rgba(14,207,184,0.18); border-color: rgba(14,207,184,0.4); }
+        .aw-cond-bar { height: 8px; border-radius: 6px; background: rgba(255,255,255,0.08); overflow: hidden; }
+        .aw-cond-fill { height: 100%; border-radius: 6px; transition: width 0.6s cubic-bezier(0.22,1,0.36,1); }
+        .aw-cond-fill.risk-high { background: linear-gradient(90deg, #f87171, var(--aw-red)); }
+        .aw-cond-fill.risk-mod { background: linear-gradient(90deg, #fbbf24, var(--aw-amber)); }
+        .aw-cond-fill.risk-low { background: linear-gradient(90deg, #5eead4, var(--aw-teal)); }
+        .aw-cond-reason { font-size: 11px; color: var(--aw-text-dim); margin-top: 5px; line-height: 1.5; }
+
+        #aidenChatbox {
+            flex: 1; overflow-y: auto; padding: 18px 14px; display: flex; flex-direction: column; gap: 14px; list-style: none;
+        }
+        #aidenChatbox::-webkit-scrollbar { width: 4px; }
+        #aidenChatbox::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 10px; }
+        .aw-mic-notice {
+            list-style: none; align-self: center; font-size: 11px; color: var(--aw-amber);
+            background: rgba(217,119,6,0.12); border: 1px solid rgba(217,119,6,0.35);
+            border-radius: 8px; padding: 6px 12px; margin: 2px 0; text-align: center; max-width: 85%;
+        }
+
+        .aw-msg { display: flex; flex-direction: column; gap: 4px; max-width: 85%; animation: aw-pop 0.22s ease; }
+        .aw-msg-meta { display: flex; align-items: center; gap: 6px; font-size: 10px; color: var(--aw-text-muted); }
+        .aw-avatar { width: 20px; height: 20px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 11px; flex-shrink: 0; }
+        .aw-bot { align-self: flex-start; }
+        .aw-bot .aw-avatar { background: linear-gradient(135deg, var(--aw-teal), var(--aw-blue)); }
+        .aw-bot .aw-bubble {
+            background: var(--aw-card); border: 1px solid rgba(14,207,184,0.14); border-radius: 16px; border-top-left-radius: 4px;
+            padding: 11px 14px; font-size: 13.5px; line-height: 1.6; white-space: pre-line; word-break: break-word;
+        }
+        .aw-user { align-self: flex-end; align-items: flex-end; }
+        .aw-user .aw-msg-meta { flex-direction: row-reverse; }
+        .aw-user .aw-bubble {
+            background: linear-gradient(135deg, #0ecfb8, #2563eb); border-radius: 16px; border-top-right-radius: 4px;
+            padding: 11px 14px; font-size: 13.5px; line-height: 1.55; color: #fff; white-space: pre-line; word-break: break-word;
+        }
+
+        /* Doctor card */
+        .aw-doctor-card {
+            align-self: stretch; background: var(--aw-card); border: 1px solid var(--aw-teal-glow); border-radius: 16px;
+            padding: 14px 16px; animation: aw-pop 0.3s ease;
+        }
+        .aw-doctor-card .aw-dc-title {
+            font-size: 10px; font-weight: 700; color: var(--aw-teal); text-transform: uppercase; letter-spacing: 1px;
+            margin-bottom: 8px; display: flex; align-items: center; gap: 6px;
+        }
+        .aw-doctor-card .aw-dc-name { font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 2px; }
+        .aw-doctor-card .aw-dc-spec { font-size: 12px; color: var(--aw-teal); margin-bottom: 10px; }
+        .aw-dc-row { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--aw-text-dim); margin-bottom: 5px; }
+        .aw-dc-row a { color: var(--aw-teal); text-decoration: none; }
+        .aw-dc-row a:hover { text-decoration: underline; }
+        .aw-dc-note { font-size: 10.5px; color: var(--aw-text-dim); margin-bottom: 10px; line-height: 1.5; }
+
+        /* Emergency alert */
+        .aw-emergency {
+            align-self: stretch; background: var(--aw-red-dim); border: 1.5px solid var(--aw-red); border-radius: 16px;
+            padding: 16px 16px; animation: aw-pulse 1.6s ease infinite;
+        }
+        @keyframes aw-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.3); } 50% { box-shadow: 0 0 0 8px rgba(239,68,68,0); } }
+        .aw-ea-header { display: flex; align-items: center; gap: 8px; font-size: 13.5px; font-weight: 700; color: var(--aw-red); margin-bottom: 6px; }
+        .aw-ea-text { font-size: 12px; color: #fca5a5; line-height: 1.55; margin-bottom: 12px; }
+        .aw-ea-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        .aw-btn-ambulance {
+            flex: 1; min-width: 130px; background: var(--aw-red); color: #fff; border: none; border-radius: 10px;
+            padding: 10px 14px; font-size: 12.5px; font-weight: 700; cursor: pointer; display: flex; align-items: center;
+            justify-content: center; gap: 6px;
+        }
+        .aw-btn-ambulance:hover { opacity: 0.9; }
+        .aw-btn-location {
+            flex: 1; min-width: 130px; background: transparent; color: var(--aw-amber); border: 1.5px solid var(--aw-amber);
+            border-radius: 10px; padding: 10px 14px; font-size: 12.5px; font-weight: 700; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 6px;
+        }
+        .aw-btn-location:hover { background: rgba(245,158,11,0.1); }
+        .aw-loc-status { font-size: 11px; color: var(--aw-amber); margin-top: 8px; display: none; align-items: center; gap: 5px; line-height: 1.5; }
+        .aw-loc-status.visible { display: flex; }
+        .aw-loc-status a { color: var(--aw-amber); }
+
+        .aw-ea-numbers { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+        .aw-ea-list { margin: 4px 0 10px 0; padding-left: 18px; font-size: 12px; color: #fecaca; line-height: 1.55; }
+        .aw-ea-sub { font-size: 11.5px; font-weight: 700; color: #fff; margin: 8px 0 2px; }
+        .aw-ea-hospital { margin-top: 10px; padding: 10px; border-radius: 10px; background: rgba(0,0,0,0.25); font-size: 12px; color: #fff; line-height: 1.55; }
+        .aw-ea-hospital a { color: var(--aw-amber); }
+        .aw-dc-extra { font-size: 11.5px; color: var(--aw-text-muted); margin-top: 6px; line-height: 1.5; }
+        .aw-dc-script { margin-top: 8px; padding: 8px 10px; border-radius: 8px; background: rgba(14,207,184,0.1); font-size: 12px; color: #fff; line-height: 1.5; }
+
+        .aw-dots { display: inline-flex; gap: 4px; padding: 3px 0; }
+        .aw-dots span { width: 6px; height: 6px; border-radius: 50%; background: var(--aw-teal); opacity: 0.3; animation: aw-jump 1.2s infinite ease-in-out; }
+        .aw-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .aw-dots span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes aw-jump { 0%,80%,100% { transform: translateY(0); opacity: 0.3; } 40% { transform: translateY(-6px); opacity: 1; } }
+
+        .aw-concluded-banner {
+            background: var(--aw-teal-dim); border: 1px solid var(--aw-teal-glow); border-radius: 10px;
+            padding: 8px 12px; font-size: 11.5px; color: var(--aw-teal); display: none; align-items: center; gap: 6px;
+        }
+        .aw-concluded-banner.visible { display: flex; }
+
+        #aidenPanel .aw-input-area { flex-shrink: 0; padding: 10px 12px 14px; background: var(--aw-surface); border-top: 1px solid var(--aw-border); }
+        #aidenPanel .aw-input-row {
+            display: flex; align-items: flex-end; gap: 8px; background: var(--aw-input-bg);
+            border: 1px solid rgba(14,207,184,0.12); border-radius: 16px; padding: 8px 8px 8px 14px;
+        }
+        #aidenPanel .aw-input-row:focus-within { border-color: rgba(14,207,184,0.4); }
+        #aidenInput {
+            flex: 1; background: transparent; border: none; outline: none; color: var(--aw-text);
+            font-family: inherit; font-size: 13.5px; line-height: 1.5; resize: none; min-height: 22px; max-height: 100px; padding: 3px 0;
+        }
+        #aidenInput::placeholder { color: var(--aw-text-muted); }
+        #aidenSendBtn {
+            width: 38px; height: 38px; min-width: 38px; background: linear-gradient(135deg, var(--aw-teal), var(--aw-blue));
+            border: none; border-radius: 11px; color: #fff; font-size: 16px; cursor: pointer; flex-shrink: 0;
+        }
+        #aidenSendBtn:disabled { opacity: 0.35; cursor: not-allowed; }
+        #aidenMicBtn {
+            height: 38px; min-width: 38px; padding: 0 8px; font-size: 12px; background: var(--aw-input-bg);
+            border: 1px solid var(--aw-border); border-radius: 11px; color: var(--aw-text-dim); font-size: 15px;
+            cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+        }
+        #aidenMicBtn.listening {
+            background: var(--aw-red-dim); border-color: var(--aw-red); color: var(--aw-red);
+            animation: aw-pulse 1.4s ease infinite;
+        }
+        #aidenMicBtn:disabled { opacity: 0.3; cursor: not-allowed; }
+        .aw-disclaimer { text-align: center; font-size: 9.5px; color: var(--aw-text-muted); margin-top: 7px; }
+
+        @media (max-width: 480px) {
+            #aidenFab { right: 16px; bottom: 16px; }
+        }
+    
+        /* ── Live risk report ── */
+        .aw-triage { border-radius: 14px; padding: 14px; margin-bottom: 14px; border: 1.5px solid; animation: aw-pop 0.3s ease; }
+        .aw-triage.lvl-EMERGENCY { background: rgba(239,68,68,0.14); border-color: var(--aw-red); }
+        .aw-triage.lvl-URGENT { background: rgba(249,115,22,0.14); border-color: #f97316; }
+        .aw-triage.lvl-SOON { background: rgba(245,158,11,0.13); border-color: var(--aw-amber); }
+        .aw-triage.lvl-ROUTINE { background: rgba(14,207,184,0.12); border-color: var(--aw-teal); }
+        .aw-triage-kicker { font-size: 9.5px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--aw-text-dim); }
+        .aw-triage-title { font-size: 15px; font-weight: 800; color: #fff; margin: 3px 0 8px; line-height: 1.35; }
+        .aw-meter { height: 9px; border-radius: 6px; background: rgba(255,255,255,0.1); overflow: hidden; }
+        .aw-meter > div { height: 100%; border-radius: 6px; transition: width 0.6s cubic-bezier(0.22,1,0.36,1); }
+        .lvl-EMERGENCY .aw-meter > div { background: linear-gradient(90deg, #f87171, var(--aw-red)); }
+        .lvl-URGENT .aw-meter > div { background: linear-gradient(90deg, #fdba74, #f97316); }
+        .lvl-SOON .aw-meter > div { background: linear-gradient(90deg, #fbbf24, var(--aw-amber)); }
+        .lvl-ROUTINE .aw-meter > div { background: linear-gradient(90deg, #5eead4, var(--aw-teal)); }
+        .aw-meter-scale { display: flex; justify-content: space-between; font-size: 9px; color: var(--aw-text-muted); margin-top: 4px; }
+        .aw-chip-row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+        .aw-chip { font-size: 10.5px; font-weight: 700; padding: 3px 9px; border-radius: 20px; background: rgba(255,255,255,0.1); color: #fff; }
+        .aw-chip.red { background: var(--aw-red); }
+        .aw-reasons { margin: 10px 0 0; padding-left: 16px; font-size: 11.5px; color: var(--aw-text); line-height: 1.55; }
+        .aw-sec { margin-bottom: 16px; }
+        .aw-sec-title { font-size: 10px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--aw-teal); margin-bottom: 7px; }
+        .aw-complete-top { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--aw-text); margin-bottom: 5px; }
+        .aw-complete-bar { height: 7px; border-radius: 6px; background: rgba(255,255,255,0.08); overflow: hidden; }
+        .aw-complete-bar > div { height: 100%; background: linear-gradient(90deg, #60a5fa, var(--aw-blue)); transition: width 0.6s; }
+        .aw-missing { font-size: 10.5px; color: var(--aw-text-dim); margin-top: 6px; line-height: 1.5; }
+        .aw-facts { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+        .aw-facts td { padding: 4px 0; vertical-align: top; border-bottom: 1px solid var(--aw-border); }
+        .aw-facts td:first-child { color: var(--aw-text-dim); width: 38%; padding-right: 8px; }
+        .aw-facts td:last-child { color: var(--aw-text); }
+        .aw-cond-serious { font-size: 8.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.4px; padding: 2px 7px; border-radius: 20px; color: #fecaca; background: rgba(239,68,68,0.18); border: 1px solid rgba(239,68,68,0.4); }
+        .aw-note { font-size: 10.5px; color: var(--aw-text-dim); line-height: 1.5; margin-top: 4px; }
+        .aw-list { margin: 0; padding-left: 16px; font-size: 11.5px; color: var(--aw-text); line-height: 1.6; }
+        .aw-summary { font-size: 12px; color: var(--aw-text); line-height: 1.6; }
+        .aw-degraded { font-size: 11px; color: var(--aw-amber); background: rgba(217,119,6,0.12); border: 1px solid rgba(217,119,6,0.35); border-radius: 8px; padding: 7px 10px; margin-bottom: 12px; line-height: 1.5; }
+
+        /* ── Voice conversation (hands-free, like a voice note / Gemini Live) ── */
+        #aidenVoiceStrip { display: none; flex-shrink: 0; padding: 12px 14px; background: var(--aw-surface); border-top: 1px solid var(--aw-border); align-items: center; gap: 12px; }
+        #aidenVoiceStrip.on { display: flex; }
+        .aw-orb { width: 46px; height: 46px; min-width: 46px; border-radius: 50%; background: var(--aw-input-bg); border: 2px solid var(--aw-teal); display: flex; align-items: center; justify-content: center; font-size: 20px; transition: 0.2s; }
+        .aw-orb.listening { border-color: var(--aw-red); background: var(--aw-red-dim); animation: aw-pulse 1.4s ease infinite; }
+        .aw-orb.thinking { border-color: var(--aw-amber); animation: aw-pulse 1s ease infinite; }
+        .aw-orb.speaking { border-color: var(--aw-teal); background: var(--aw-teal-dim); animation: aw-pulse 1.1s ease infinite; }
+        .aw-voice-text { flex: 1; min-width: 0; }
+        .aw-voice-state { font-size: 12.5px; font-weight: 700; color: #fff; }
+        .aw-voice-heard { font-size: 11.5px; color: var(--aw-text-dim); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .aw-voice-end { background: var(--aw-red); color: #fff; border: none; border-radius: 10px; padding: 8px 12px; font-size: 12px; font-weight: 700; cursor: pointer; flex-shrink: 0; }
+        #aidenVoiceBtn { height: 38px; min-width: 38px; padding: 0 10px; background: var(--aw-input-bg); border: 1px solid var(--aw-border); border-radius: 11px; color: var(--aw-text-dim); font-size: 15px; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+        #aidenVoiceBtn.on { background: var(--aw-teal-dim); border-color: var(--aw-teal); color: var(--aw-teal); }
+        #aidenVoiceBtn:disabled { opacity: 0.3; cursor: not-allowed; }
+        .aw-speak-btn { background: none; border: none; cursor: pointer; font-size: 12px; color: var(--aw-text-muted); padding: 0 2px; }
+        .aw-speak-btn:hover { color: var(--aw-teal); }
+        #aidenLangNote { font-size: 10.5px; color: var(--aw-teal); }
+
+        /* Consultation and hospital cards */
+        .aw-card-btn { display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, var(--aw-teal), var(--aw-blue)); color: #fff; border: none; border-radius: 10px; padding: 9px 14px; font-size: 12.5px; font-weight: 700; cursor: pointer; text-decoration: none; margin: 4px 6px 0 0; }
+        .aw-card-btn.alt { background: transparent; border: 1.5px solid var(--aw-teal); color: var(--aw-teal); }
+        .aw-hospital-card { align-self: stretch; background: var(--aw-card); border: 1.5px solid #f97316; border-radius: 16px; padding: 14px 16px; animation: aw-pop 0.3s ease; }
+        .aw-hospital-card .aw-dc-title { color: #fdba74; }
+
+    </style>
+
+    <button id="aidenFab" title="Chat with AIDEN — AI health assistant">
+        🩺
+        <span class="fab-badge"></span>
+    </button>
+
+    <div id="aidenPanel">
+        <header>
+            <div class="aw-logo">
+                <div class="aw-logo-icon">🩺</div>
+                <div class="aw-logo-text">
+                    <h4>AIDEN — AI Health Assistant</h4>
+                    <p>AI, not a real doctor · Understands South African languages</p>
+                </div>
+            </div>
+            <div class="aw-header-actions">
+                <button class="aw-icon-btn" id="aidenResetBtn" title="New session">↻</button>
+                <button class="aw-icon-btn" id="aidenCloseBtn" title="Close">✕</button>
+            </div>
+        </header>
+
+        <div class="aw-body">
+            <div class="aw-chat-col">
+                <div class="aw-tools-bar">
+                    <select id="aidenLangSelect" title="Conversation language">
+                        <option value="Auto">Auto: reply in my language</option>
+                        <option value="English">English</option>
+                        <option value="Afrikaans">Afrikaans</option>
+                        <option value="isiZulu">isiZulu</option>
+                        <option value="isiXhosa">isiXhosa</option>
+                        <option value="Sepedi">Sepedi</option>
+                        <option value="Setswana">Setswana</option>
+                        <option value="Sesotho">Sesotho</option>
+                        <option value="Xitsonga">Xitsonga</option>
+                        <option value="siSwati">siSwati</option>
+                        <option value="Tshivenda">Tshivenda</option>
+                        <option value="isiNdebele">isiNdebele</option>
+                    </select>
+                    <span id="aidenLangNote"></span>
+                    <button class="aw-voice-toggle" id="aidenLocToggle" title="Share your location so AIDEN can show the nearest hospital">📍 Location off</button>
+                    <button class="aw-voice-toggle" id="aidenHistoryBtn" title="Let AIDEN see your NMAS medical history for this chat">🔒 History off</button>
+                </div>
+
+                <ul id="aidenChatbox"></ul>
+
+                <div id="aidenVoiceStrip">
+                    <div class="aw-orb" id="aidenOrb">🎙️</div>
+                    <div class="aw-voice-text">
+                        <div class="aw-voice-state" id="aidenVoiceState">Listening…</div>
+                        <div class="aw-voice-heard" id="aidenVoiceHeard"></div>
+                    </div>
+                    <button class="aw-voice-end" id="aidenVoiceEnd">End voice chat</button>
+                </div>
+
+                <div class="aw-input-area">
+                    <div id="aidenConcludedBanner" class="aw-concluded-banner">✅ Assessment ready. You can keep asking AIDEN questions or tell it if anything changes.</div>
+                    <div class="aw-input-row">
+                        <textarea id="aidenInput" placeholder="Tell AIDEN how you feel..." rows="1"></textarea>
+                        <button id="aidenVoiceBtn" title="Talk to AIDEN: speak, pause, and it answers">🎙️</button>
+                        <button id="aidenSendBtn">➤</button>
+                    </div>
+                    <p class="aw-disclaimer">⚠️ AI-generated, not a medical diagnosis. 🚨 Emergency? Call 10177 or 112.</p>
+                </div>
+            </div>
+
+            <div class="aw-report-col">
+                <div class="aw-report-header">
+                    <div class="aw-report-title">🩺 AI Health Risk Report</div>
+                    <div class="aw-report-sub">Updates after every message you send</div>
+                </div>
+                <div id="aidenReportBody" class="aw-report-body">
+                    <div class="aw-report-empty">
+                        <div class="aw-report-empty-icon">📊</div>
+                        <p>Tell AIDEN what is wrong. How urgent it is, and what AIDEN has understood so far, will appear here and update with every answer.</p>
+                    </div>
+                </div>
+                <div class="aw-report-disclaimer">⚠️ AI screening only, not a clinical diagnosis. Always confirm with a real doctor.</div>
+            </div>
+        </div>
+    </div>
+    <script>
+    (function () {
+        var fab = document.getElementById('aidenFab');
+        var panel = document.getElementById('aidenPanel');
+        var closeBtn = document.getElementById('aidenCloseBtn');
+        var resetBtn = document.getElementById('aidenResetBtn');
+        var chatbox = document.getElementById('aidenChatbox');
+        var inputEl = document.getElementById('aidenInput');
+        var sendBtn = document.getElementById('aidenSendBtn');
+        var voiceBtn = document.getElementById('aidenVoiceBtn');
+        var langSelect = document.getElementById('aidenLangSelect');
+        var langNote = document.getElementById('aidenLangNote');
+        var historyBtn = document.getElementById('aidenHistoryBtn');
+        var locToggle = document.getElementById('aidenLocToggle');
+        var reportBody = document.getElementById('aidenReportBody');
+        var concludedBanner = document.getElementById('aidenConcludedBanner');
+        var strip = document.getElementById('aidenVoiceStrip');
+        var orb = document.getElementById('aidenOrb');
+        var voiceStateEl = document.getElementById('aidenVoiceState');
+        var heardEl = document.getElementById('aidenVoiceHeard');
+        var voiceEndBtn = document.getElementById('aidenVoiceEnd');
+
+        var sessionId = null;
+        var started = false;
+        var sending = false;
+        var selectedLanguage = langSelect.value;   // "Auto" or one of the 11 South African languages
+        var activeLanguage = 'English';            // language AIDEN last replied in
+        var historyConsent = false;
+        var locationOn = false;
+        var coords = null;
+        var emergencyEl = null;
+        var shown = {};
+
+        // The 11 spoken official languages of South Africa. How well a browser can LISTEN to or SPEAK
+        // each one depends on the voices installed on the device; the text chat works in all of them.
+        var LANG_BCP47 = {
+            'English': 'en-ZA', 'Afrikaans': 'af-ZA', 'isiZulu': 'zu-ZA', 'isiXhosa': 'xh-ZA',
+            'Sepedi': 'nso-ZA', 'Setswana': 'tn-ZA', 'Sesotho': 'st-ZA', 'Xitsonga': 'ts-ZA',
+            'siSwati': 'ss-ZA', 'Tshivenda': 've-ZA', 'isiNdebele': 'nr-ZA'
+        };
+        function effectiveLang() { return selectedLanguage !== 'Auto' ? selectedLanguage : activeLanguage; }
+        function updateLangNote() {
+            langNote.textContent = (selectedLanguage === 'Auto' && started) ? 'Replying in ' + activeLanguage : '';
+        }
+        langSelect.addEventListener('change', function () {
+            selectedLanguage = langSelect.value;
+            if (selectedLanguage !== 'Auto') activeLanguage = selectedLanguage;
+            updateLangNote();
+        });
+
+        historyBtn.addEventListener('click', function () {
+            historyConsent = !historyConsent;
+            historyBtn.classList.toggle('active', historyConsent);
+            historyBtn.textContent = historyConsent ? '🔓 History on' : '🔒 History off';
+            if (started) init();   // the record is only read when a conversation starts
+        });
+
+        /* ───────────── Voice conversation ─────────────
+           Tap the microphone once. Speak naturally and pause: AIDEN decides you are finished, answers
+           aloud, then listens again, until you tap End. No timers, no send button, no settings. */
+        var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+        var synth = window.speechSynthesis || null;
+        var SILENCE_MS = 1600;           // pause that counts as "finished speaking"
+        var voiceMode = false;
+        var vState = 'idle';
+        var recognition = null;
+        var finalText = '', interimText = '', lastHeardAt = 0, quietRestarts = 0;
+        var silenceTimer = null;
+        var speakToken = 0;
+        var voiceNoticeShown = false;
+
+        if (!SR) {
+            voiceBtn.disabled = true;
+            voiceBtn.title = 'Voice needs Chrome, Edge or Safari';
+        }
+
+        function setVoiceState(state, text) {
+            vState = state;
+            orb.className = 'aw-orb ' + state;
+            voiceStateEl.textContent = text;
+        }
+
+        function stopRecognition() {
+            clearInterval(silenceTimer);
+            if (recognition) {
+                var r = recognition;
+                recognition = null;
+                r.onend = null; r.onresult = null; r.onerror = null;
+                try { r.stop(); } catch (e) { }
+            }
+        }
+
+        function startVoiceMode() {
+            if (!SR) return;
+            if (!started) { started = true; init(); }
+            voiceMode = true;
+            quietRestarts = 0;
+            strip.classList.add('on');
+            voiceBtn.classList.add('on');
+            if (synth) synth.cancel();
+            heardEl.textContent = selectedLanguage === 'Auto' ? 'Tip: pick your language above for the best voice recognition.' : '';
+            if (!sending) listen();
+            else setVoiceState('thinking', 'Thinking…');
+        }
+
+        function endVoiceMode(message) {
+            voiceMode = false;
+            speakToken++;
+            stopRecognition();
+            if (synth) synth.cancel();
+            strip.classList.remove('on');
+            voiceBtn.classList.remove('on');
+            vState = 'idle';
+            if (message) appendNotice(message);
+        }
+
+        function listen() {
+            if (!voiceMode || sending) return;
+            finalText = ''; interimText = ''; lastHeardAt = 0;
+            setVoiceState('listening', 'Listening… just speak');
+            stopRecognition();
+            var lang = LANG_BCP47[effectiveLang()] || 'en-ZA';
+            recognition = new SR();
+            recognition.lang = lang;
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.maxAlternatives = 1;
+            recognition.onresult = function (ev) {
+                var interim = '';
+                for (var i = ev.resultIndex; i < ev.results.length; i++) {
+                    var t = ev.results[i][0].transcript;
+                    if (ev.results[i].isFinal) finalText += t + ' '; else interim += t;
+                }
+                interimText = interim;
+                lastHeardAt = Date.now();
+                quietRestarts = 0;
+                heardEl.textContent = (finalText + interimText).trim();
+            };
+            recognition.onerror = function (ev) {
+                if (ev.error === 'no-speech' || ev.error === 'aborted') return;   // onend restarts quietly
+                var msg;
+                if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed' || ev.error === 'permission-denied') {
+                    msg = 'Microphone access was blocked. Allow the microphone for this site, then tap the microphone again.';
+                } else if (ev.error === 'audio-capture') {
+                    msg = 'No microphone was found on this device.';
+                } else if (ev.error === 'language-not-supported') {
+                    msg = 'This browser cannot listen in ' + effectiveLang() + ' yet. You can type in ' + effectiveLang() + ' and AIDEN will still answer in it.';
+                } else {
+                    msg = 'Voice input stopped (' + ev.error + '). You can keep typing.';
+                }
+                endVoiceMode(msg);
+            };
+            recognition.onend = function () {
+                // The browser ended the session by itself (long silence). Use what was heard, or listen again.
+                recognition = null;
+                if (!voiceMode || sending) return;
+                if ((finalText + interimText).trim()) { submitVoice(); return; }
+                quietRestarts++;
+                if (quietRestarts >= 3) {
+                    endVoiceMode('I stopped listening because I did not hear anything. Tap the microphone when you want to talk again.');
+                    return;
+                }
+                setTimeout(listen, 200);
+            };
+            try { recognition.start(); }
+            catch (e) { endVoiceMode('Could not start the microphone. You can still type.'); return; }
+            silenceTimer = setInterval(function () {
+                if (!voiceMode || sending) return;
+                var t = (finalText + interimText).trim();
+                if (t && lastHeardAt && (Date.now() - lastHeardAt) > SILENCE_MS) submitVoice();
+            }, 250);
+        }
+
+        function submitVoice() {
+            var text = (finalText + ' ' + interimText).replace(/\s+/g, ' ').trim();
+            stopRecognition();
+            if (!text) { setTimeout(listen, 200); return; }
+            heardEl.textContent = '';
+            sendText(text);
+        }
+
+        voiceBtn.addEventListener('click', function () {
+            if (voiceMode) endVoiceMode(); else startVoiceMode();
+        });
+        voiceEndBtn.addEventListener('click', function () { endVoiceMode(); });
+        orb.addEventListener('click', function () {
+            if (vState === 'speaking') { speakToken++; if (synth) synth.cancel(); listen(); }
+            else if (vState === 'listening' && (finalText + interimText).trim()) { submitVoice(); }
+        });
+
+        /* ───────────── Speaking replies aloud ───────────── */
+        function pickVoice(lang) {
+            if (!synth) return null;
+            var voices = synth.getVoices() || [];
+            var want = lang.toLowerCase().replace('_', '-');
+            var primary = want.split('-')[0];
+            var i;
+            for (i = 0; i < voices.length; i++) { if ((voices[i].lang || '').toLowerCase().replace('_', '-') === want) return voices[i]; }
+            for (i = 0; i < voices.length; i++) { if ((voices[i].lang || '').toLowerCase().indexOf(primary) === 0) return voices[i]; }
+            return null;
+        }
+        function splitSentences(text) {
+            var parts = String(text).replace(/\s+/g, ' ').match(/[^.!?]+[.!?]*/g) || [String(text)];
+            var out = [], cur = '';
+            for (var i = 0; i < parts.length; i++) {
+                if ((cur + parts[i]).length > 180 && cur) { out.push(cur.trim()); cur = parts[i]; }
+                else cur += parts[i];
+            }
+            if (cur.trim()) out.push(cur.trim());
+            return out;
+        }
+        /* Reads text aloud in the reply language, then calls done(). Works around browsers that cut long
+           utterances by speaking one sentence at a time. */
+        function speakThen(text, done, showState) {
+            if (!synth || !text) { if (done) done(); return; }
+            var my = ++speakToken;
+            synth.cancel();
+            var lang = LANG_BCP47[effectiveLang()] || 'en-ZA';
+            var voice = pickVoice(lang);
+            if (!voice && effectiveLang() !== 'English') {
+                if (!voiceNoticeShown) {
+                    voiceNoticeShown = true;
+                    appendNotice('This device has no ' + effectiveLang() + ' voice, so AIDEN reads with an English voice. The words on screen are in ' + effectiveLang() + '.');
+                }
+                voice = pickVoice('en-ZA');
+                lang = 'en-ZA';
+            }
+            if (showState) setVoiceState('speaking', 'Speaking… tap the circle to interrupt');
+            var chunks = splitSentences(text);
+            var idx = 0, finished = false;
+            function finish() { if (finished) return; finished = true; if (my === speakToken && done) done(); }
+            var guard = setTimeout(finish, Math.min(90000, 5000 + String(text).length * 95));
+            function next() {
+                if (my !== speakToken) { clearTimeout(guard); return; }
+                if (idx >= chunks.length) { clearTimeout(guard); finish(); return; }
+                var u = new SpeechSynthesisUtterance(chunks[idx++]);
+                u.lang = lang;
+                if (voice) u.voice = voice;
+                u.onend = next;
+                u.onerror = next;
+                synth.speak(u);
+            }
+            next();
+        }
+
+        /* ───────────── Panel open / close ───────────── */
+        function toggleOpen() {
+            var isOpen = panel.classList.toggle('open');
+            fab.classList.remove('has-unread');
+            if (isOpen && !started) { started = true; init(); }
+            if (!isOpen && voiceMode) endVoiceMode();
+            if (isOpen) inputEl.focus();
+        }
+        fab.addEventListener('click', toggleOpen);
+        closeBtn.addEventListener('click', function () { panel.classList.remove('open'); if (voiceMode) endVoiceMode(); });
+        resetBtn.addEventListener('click', function () {
+            if (voiceMode) endVoiceMode();
+            if (sessionId) post('/api/ai/chat/reset', { sessionId: sessionId }).catch(function () { });
+            init();
+        });
+
+        locToggle.addEventListener('click', function () {
+            if (locationOn) {
+                locationOn = false; coords = null;
+                locToggle.classList.remove('active');
+                locToggle.textContent = '📍 Location off';
+                return;
+            }
+            locToggle.textContent = '📍 Locating...';
+            getPosition(function (c) {
+                locationOn = true; coords = c;
+                locToggle.classList.add('active');
+                locToggle.textContent = '📍 Location on';
+            }, function () {
+                locToggle.textContent = '📍 Location off';
+                alert('Could not get your location. Please allow location access in your browser.');
+            });
+        });
+
+        function getPosition(ok, fail) {
+            if (!navigator.geolocation) { if (fail) fail({ code: 0 }); return; }
+            navigator.geolocation.getCurrentPosition(
+                function (pos) { ok({ lat: pos.coords.latitude.toFixed(6), lng: pos.coords.longitude.toFixed(6) }); },
+                function (err) { if (fail) fail(err); },
+                { timeout: 12000, maximumAge: 60000, enableHighAccuracy: true });
+        }
+
+        /* ───────────── Conversation ───────────── */
+        function init() {
+            sessionId = 'sess-' + Math.random().toString(36).substr(2, 12) + '-' + Date.now();
+            emergencyEl = null;
+            shown = {};
+            sending = false;
+            chatbox.innerHTML = '';
+            concludedBanner.classList.remove('visible');
+            resetReport();
+            setInputEnabled(true);
+
+            var loading = appendBotLoading();
+            post('/api/ai/chat/start', { sessionId: sessionId, language: selectedLanguage, historyConsent: historyConsent })
+                .then(function (data) {
+                    if (data.language) activeLanguage = data.language;
+                    updateLangNote();
+                    replaceBotLoading(loading, data.message, true);
+                    if (voiceMode) speakThen(data.message, listen, true);
+                })
+                .catch(function () {
+                    replaceBotLoading(loading, "Hi! I'm AIDEN, an AI health assistant. I am not a real doctor. What is troubling you today?", true);
+                    if (voiceMode) listen();
+                });
+        }
+
+        function send() {
+            if (sending) return;
+            var text = inputEl.value.trim();
+            if (!text) return;
+            if (voiceMode && vState === 'listening') { stopRecognition(); }
+            sendText(text);
+        }
+
+        function sendText(text) {
+            if (!text || sending) return;
+            appendUser(text);
+            inputEl.value = '';
+            inputEl.style.height = 'auto';
+            sending = true;
+            setInputEnabled(false);
+            if (voiceMode) setVoiceState('thinking', 'Thinking…');
+
+            var loading = appendBotLoading();
+            var payload = { sessionId: sessionId, message: text, language: selectedLanguage };
+            if (coords) { payload.lat = coords.lat; payload.lng = coords.lng; }
+            post('/api/ai/chat/message', payload)
+                .then(function (data) { handleReply(data, loading); })
+                .catch(function () {
+                    sending = false;
+                    replaceBotLoading(loading, "I'm having trouble right now. Please try again. If this is an emergency, call 10177 or 112.", false);
+                    setInputEnabled(true);
+                    if (voiceMode) listen();
+                });
+        }
+
+        function handleReply(data, loading) {
+            sending = false;
+            if (data.sessionExpired) {
+                replaceBotLoading(loading, 'Your session expired. Starting a new session...', false);
+                setTimeout(init, 1200);
+                return;
+            }
+            if (data.language) { activeLanguage = data.language; updateLangNote(); }
+            replaceBotLoading(loading, data.message, true);
+            if (data.report) renderReport(data.report);
+
+            if (data.emergency) {
+                startEmergency();
+                fillEmergency(data.emergency);
+            } else if (data.isEmergency) {
+                startEmergency();
+                if (data.hospital) showHospital(data.hospital);
+            } else {
+                if (data.hospital) appendHospitalCard(data.hospital);
+                if (data.doctor) appendConsultCard(data.doctor);
+            }
+            if (data.isDiagnosis && !data.isEmergency) concludedBanner.classList.add('visible');
+            if (!panel.classList.contains('open')) fab.classList.add('has-unread');
+
+            setInputEnabled(true);
+            if (voiceMode) speakThen(data.message, listen, true);
+            else inputEl.focus();
+        }
+
+        sendBtn.addEventListener('click', send);
+        inputEl.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+        });
+        inputEl.addEventListener('input', function () {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 100) + 'px';
+        });
+
+        /* ───────────── Live risk report ───────────── */
+        function resetReport() {
+            reportBody.innerHTML =
+                '<div class="aw-report-empty">'
+              + '<div class="aw-report-empty-icon">📊</div>'
+              + '<p>Tell AIDEN what is wrong. How urgent it is, and what AIDEN has understood so far, will appear here and update with every answer.</p>'
+              + '</div>';
+        }
+        function num(n) { n = Number(n); return isNaN(n) ? 0 : Math.max(0, Math.min(100, Math.round(n))); }
+        function listHtml(items) {
+            return '<ul class="aw-list">' + items.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>';
+        }
+        function renderReport(rep) {
+            if (!rep) return;
+            var t = rep.triage || {};
+            var lvl = t.level || 'SOON';
+            var html = '';
+            if (rep.degraded) {
+                html += '<div class="aw-degraded">AIDEN\'s AI service could not be reached, so this is a limited check based only on your answers. Please try again shortly.</div>';
+            }
+            if (rep.personalised) {
+                html += '<div class="aw-cond-context">🔗 Personalised using your NMAS medical history, as you allowed.</div>';
+            }
+            html += '<div class="aw-triage lvl-' + esc(lvl) + '">'
+                  + '<div class="aw-triage-kicker">How urgent is this?</div>'
+                  + '<div class="aw-triage-title">' + esc(t.label || '') + '</div>'
+                  + '<div class="aw-meter"><div style="width:' + num(t.score) + '%"></div></div>'
+                  + '<div class="aw-meter-scale"><span>Can wait</span><span>Doctor soon</span><span>Hospital today</span><span>Ambulance</span></div>'
+                  + '<div class="aw-chip-row">';
+            if (t.ambulance) html += '<span class="aw-chip red">🚑 Ambulance advised: 10177 or 112</span>';
+            else if (t.hospitalNow) html += '<span class="aw-chip">🏥 Hospital emergency unit today</span>';
+            else if (t.consultation) html += '<span class="aw-chip">🩺 Consultation recommended</span>';
+            else if (lvl === 'ROUTINE') html += '<span class="aw-chip">🏠 No doctor needed right now</span>';
+            html += '</div>';
+            if (t.reasons && t.reasons.length) html += '<ul class="aw-reasons">' + t.reasons.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>';
+            html += '</div>';
+
+            var comp = num(rep.completeness);
+            html += '<div class="aw-sec"><div class="aw-complete-top"><span>Information collected</span><span>' + comp + '% · ' + esc(rep.confidence || '') + '</span></div>'
+                  + '<div class="aw-complete-bar"><div style="width:' + comp + '%"></div></div>';
+            if (!rep['final'] && rep.missing && rep.missing.length) html += '<div class="aw-missing">Still needed: ' + esc(rep.missing.join(', ')) + '</div>';
+            html += '</div>';
+
+            if (rep.captured && rep.captured.length) {
+                html += '<div class="aw-sec"><div class="aw-sec-title">What you told AIDEN</div><table class="aw-facts">'
+                      + rep.captured.map(function (r) { return '<tr><td>' + esc(r.label) + '</td><td>' + esc(r.value) + '</td></tr>'; }).join('')
+                      + '</table></div>';
+            }
+
+            html += '<div class="aw-sec"><div class="aw-sec-title">Possible explanations</div>';
+            if (rep.conditions && rep.conditions.length) {
+                rep.conditions.forEach(function (c) {
+                    var cls = c.percent >= 50 ? 'risk-high' : (c.percent >= 25 ? 'risk-mod' : 'risk-low');
+                    var tag = c.percent >= 50 ? 'Most likely' : (c.percent >= 25 ? 'Possible' : 'Less likely');
+                    html += '<div class="aw-cond-row">'
+                          + '<div class="aw-cond-top"><span class="aw-cond-name">' + esc(c.name) + '</span>'
+                          + '<span class="aw-cond-right">'
+                          + (c.serious ? '<span class="aw-cond-serious">Needs ruling out</span>' : '')
+                          + '<span class="aw-cond-tag ' + cls + '">' + tag + '</span>'
+                          + '<span class="aw-cond-pct ' + cls + '">' + num(c.percent) + '%</span></span></div>'
+                          + '<div class="aw-cond-bar"><div class="aw-cond-fill ' + cls + '" style="width:' + num(c.percent) + '%"></div></div>'
+                          + '<div class="aw-cond-reason">' + esc(c.reason) + '</div></div>';
+                });
+            }
+            html += '<div class="aw-note">' + esc(rep.conditionsNote || '') + '</div></div>';
+
+            if (rep.summary) html += '<div class="aw-sec"><div class="aw-sec-title">Summary</div><div class="aw-summary">' + esc(rep.summary) + '</div></div>';
+            if (rep.watchFor && rep.watchFor.length) html += '<div class="aw-sec"><div class="aw-sec-title">Go to hospital or call 10177 if</div>' + listHtml(rep.watchFor) + '</div>';
+            if (rep.selfCare && rep.selfCare.length) html += '<div class="aw-sec"><div class="aw-sec-title">What you can do at home</div>' + listHtml(rep.selfCare) + '</div>';
+            reportBody.innerHTML = html;
+        }
+
+        /* ───────────── Chat DOM helpers ───────────── */
+        function metaHtml(icon, name, color) {
+            return '<div class="aw-msg-meta"><span class="aw-avatar" style="background:' + (name === 'AIDEN' ? '' : 'transparent') + '">' + icon + '</span>'
+                 + '<span style="color:' + color + '">' + name + '</span></div>';
+        }
+        function appendBotLoading() {
+            var li = document.createElement('li');
+            li.className = 'aw-msg aw-bot';
+            li.innerHTML = metaHtml('🩺', 'AIDEN', '#0ecfb8') + '<div class="aw-bubble"><div class="aw-dots"><span></span><span></span><span></span></div></div>';
+            chatbox.appendChild(li); scrollDown(); return li;
+        }
+        function replaceBotLoading(li, text, withSpeaker) {
+            li.querySelector('.aw-bubble').textContent = text;
+            if (withSpeaker && synth) {
+                var b = document.createElement('button');
+                b.className = 'aw-speak-btn';
+                b.title = 'Read this aloud';
+                b.textContent = '🔊';
+                b.addEventListener('click', function () { speakThen(text, null, false); });
+                li.querySelector('.aw-msg-meta').appendChild(b);
+            }
+            scrollDown();
+        }
+        function appendUser(text) {
+            var li = document.createElement('li');
+            li.className = 'aw-msg aw-user';
+            li.innerHTML = metaHtml('🙂', 'You', '#8fbad8') + '<div class="aw-bubble">' + esc(text) + '</div>';
+            chatbox.appendChild(li); scrollDown();
+        }
+        function appendNotice(text) {
+            var li = document.createElement('li');
+            li.className = 'aw-mic-notice';
+            li.textContent = text;
+            chatbox.appendChild(li); scrollDown();
+        }
+
+        /* A doctor is shown ONLY when AIDEN decides a consultation has to be arranged. */
+        function appendConsultCard(doc) {
+            var key = 'doc:' + doc.doctorId;
+            if (shown[key]) return;
+            shown[key] = true;
+            var li = document.createElement('li');
+            li.className = 'aw-doctor-card';
+            var html =
+                '<div class="aw-dc-title">🩺 Arrange a consultation</div>'
+              + '<div class="aw-dc-note">AIDEN suggests a doctor looks at this soon. It is not an emergency. This is an AI assessment, not a diagnosis.</div>'
+              + '<div class="aw-dc-name">' + esc(doc.name) + '</div>'
+              + '<div class="aw-dc-spec">' + esc(doc.specialization) + '</div>'
+              + '<div class="aw-dc-row">🏥 ' + esc(doc.hospital) + (doc.distanceKm != null ? ' (about ' + esc(doc.distanceKm) + ' km away)' : '') + '</div>';
+            if (doc.address) html += '<div class="aw-dc-row">📍 ' + esc(doc.address) + '</div>';
+            if (doc.phone) html += '<div class="aw-dc-row">📞 <a href="tel:' + esc(doc.phone) + '">' + esc(doc.phone) + '</a></div>';
+            if (doc.reason) html += '<div class="aw-dc-extra">' + esc(doc.reason) + '</div>';
+            if (doc.visitScript) html += '<div class="aw-dc-script">🗣️ ' + esc(doc.visitScript) + '</div>';
+            html += '<div style="margin-top:8px;">';
+            if (doc.videoOption) {
+                html += '<button class="aw-card-btn" data-video="1">📹 Request a video consultation with ' + esc(doc.videoOption.name) + ' (on shift now)</button>';
+            } else {
+                html += '<a class="aw-card-btn" href="/video/my-requests">📹 See video consultation times</a>';
+            }
+            if (doc.mapsUrl) html += '<a class="aw-card-btn alt" href="' + esc(doc.mapsUrl) + '" target="_blank" rel="noopener">🧭 Directions</a>';
+            html += '</div>';
+            if (doc.videoOption) html += '<div class="aw-dc-extra">What AIDEN gathered is attached to the request, so the doctor does not need to ask everything again.</div>';
+            if (doc.alternatives && doc.alternatives.length) {
+                html += '<div class="aw-dc-extra">Also available: ' + doc.alternatives.map(function (a) {
+                    return esc(a.name) + ' at ' + esc(a.hospital) + (a.distanceKm != null ? ' (' + esc(a.distanceKm) + ' km)' : '');
+                }).join('; ') + '</div>';
+            }
+            if (!coords) html += '<div class="aw-dc-extra">Tip: turn on 📍 Location above and AIDEN will pick the hospital nearest to you.</div>';
+            li.innerHTML = html;
+            chatbox.appendChild(li); scrollDown();
+            var vb = li.querySelector('button[data-video]');
+            if (vb) vb.addEventListener('click', function () {
+                var f = document.createElement('form');
+                f.method = 'post';
+                f.action = '/video/request';
+                var a = document.createElement('input'); a.type = 'hidden'; a.name = 'doctorId'; a.value = doc.videoOption.doctorId; f.appendChild(a);
+                var n = document.createElement('input'); n.type = 'hidden'; n.name = 'notes'; n.value = doc.notes || ''; f.appendChild(n);
+                document.body.appendChild(f);
+                f.submit();
+            });
+        }
+
+        /* URGENT: no ambulance, but waiting at home is not safe. */
+        function appendHospitalCard(h) {
+            if (!h) return;
+            var key = 'hosp:' + h.name;
+            if (shown[key]) return;
+            shown[key] = true;
+            var li = document.createElement('li');
+            li.className = 'aw-hospital-card';
+            var html =
+                '<div class="aw-dc-title">🏥 Go to a hospital emergency unit today</div>'
+              + '<div class="aw-dc-note">Do not wait at home. Ask someone to take you, and do not drive yourself. If it gets worse or you cannot get there, call 10177 or 112.</div>'
+              + '<div class="aw-dc-name">' + esc(h.name) + '</div>'
+              + '<div class="aw-dc-row">📍 ' + esc(h.address || '') + (h.distanceKm != null ? ' (about ' + esc(h.distanceKm) + ' km away)' : '') + '</div>';
+            if (h.phone) html += '<div class="aw-dc-row">📞 <a href="tel:' + esc(h.phone) + '">' + esc(h.phone) + '</a></div>';
+            if (h.reason) html += '<div class="aw-dc-extra">' + esc(h.reason) + '</div>';
+            html += '<div style="margin-top:8px;">';
+            if (h.mapsUrl) html += '<a class="aw-card-btn" href="' + esc(h.mapsUrl) + '" target="_blank" rel="noopener">🧭 Get directions</a>';
+            html += '<a class="aw-card-btn alt" href="tel:10177">📞 Ambulance 10177</a></div>';
+            if (!coords) html += '<div class="aw-dc-extra">Turn on 📍 Location above and AIDEN will show the hospital nearest to you.</div>';
+            li.innerHTML = html;
+            chatbox.appendChild(li); scrollDown();
+        }
+
+        /* ───────────── Emergency: numbers, location, what to do now. No questions, no doctor. ───────────── */
+        function startEmergency() {
+            if (emergencyEl) return emergencyEl;
+            var li = document.createElement('li');
+            li.className = 'aw-emergency';
+            li.innerHTML =
+                '<div class="aw-ea-header">🚨 <span class="aw-ea-title">Emergency</span></div>'
+              + '<div class="aw-ea-numbers">'
+              + '<button class="aw-btn-ambulance" onclick="window.location.href=\'tel:10177\'">📞 Ambulance 10177</button>'
+              + '<button class="aw-btn-ambulance" onclick="window.location.href=\'tel:112\'">📞 Emergency 112</button>'
+              + '</div>'
+              + '<div class="aw-ea-extra"></div>'
+              + '<div class="aw-ea-actions"><button class="aw-btn-location">📍 Share My Location</button></div>'
+              + '<div class="aw-loc-status"><span class="aw-loc-text">Retrieving location...</span></div>'
+              + '<div class="aw-ea-hospital" style="display:none"></div>'
+              + '<div class="aw-ea-steps"></div>';
+            chatbox.appendChild(li); scrollDown();
+            emergencyEl = li;
+            li.querySelector('.aw-btn-location').addEventListener('click', captureEmergencyLocation);
+            captureEmergencyLocation();
+            return li;
+        }
+
+        function fillEmergency(info) {
+            if (!emergencyEl) startEmergency();
+            var li = emergencyEl;
+            li.querySelector('.aw-ea-title').textContent = info.title || 'Emergency';
+            var nums = '';
+            (info.numbers || []).forEach(function (n) {
+                nums += '<button class="aw-btn-ambulance" onclick="window.location.href=\'tel:' + esc(n.dial) + '\'">📞 ' + esc(n.label) + ' ' + esc(n.number) + '</button>';
+            });
+            if (nums) li.querySelector('.aw-ea-numbers').innerHTML = nums;
+            var steps = '<div class="aw-ea-sub">Do this now</div><ul class="aw-ea-list">'
+                + (info.steps || []).map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>';
+            if (info.bystander && info.bystander.length) {
+                steps += '<div class="aw-ea-sub">If someone is with you, they should</div><ul class="aw-ea-list">'
+                      + info.bystander.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>';
+            }
+            li.querySelector('.aw-ea-steps').innerHTML = steps;
+            if (info.hospital) showHospital(info.hospital);
+            scrollDown();
+        }
+
+        function showHospital(h) {
+            if (!emergencyEl || !h) return;
+            var box = emergencyEl.querySelector('.aw-ea-hospital');
+            var html = '🏥 <b>' + esc(h.reason || 'Nearest hospital') + ':</b> ' + esc(h.name)
+                + (h.distanceKm != null ? ' (about ' + esc(h.distanceKm) + ' km)' : '')
+                + '<br>📍 ' + esc(h.address || '');
+            if (h.phone) html += '<br>📞 <a href="tel:' + esc(h.phone) + '">' + esc(h.phone) + '</a>';
+            if (h.mapsUrl) html += '<br><a href="' + esc(h.mapsUrl) + '" target="_blank" rel="noopener">🧭 Get directions</a>';
+            box.innerHTML = html;
+            box.style.display = 'block';
+            scrollDown();
+        }
+
+        function captureEmergencyLocation() {
+            if (!emergencyEl) return;
+            var btn = emergencyEl.querySelector('.aw-btn-location');
+            var status = emergencyEl.querySelector('.aw-loc-status');
+            var text = emergencyEl.querySelector('.aw-loc-text');
+            status.classList.add('visible');
+            if (!navigator.geolocation) { text.textContent = 'Location is not supported on this device. Call 10177 or 112 and describe where you are.'; return; }
+            btn.disabled = true;
+            btn.textContent = '📍 Getting location...';
+            text.textContent = 'Retrieving your location...';
+            getPosition(function (c) {
+                coords = c;
+                var mapsUrl = 'https://www.google.com/maps?q=' + c.lat + ',' + c.lng;
+                text.innerHTML = '📍 Your location: <a href="' + mapsUrl + '" target="_blank" rel="noopener">open in Google Maps</a> (' + c.lat + ', ' + c.lng + '). Tell the ambulance operator where you are.';
+                btn.textContent = '✅ Location Shared';
+                post('/api/ai/emergency-location', { sessionId: sessionId, lat: c.lat, lng: c.lng })
+                    .then(function (r) { if (r && r.hospital) showHospital(r.hospital); })
+                    .catch(function () { });
+            }, function (err) {
+                var msg = 'Could not get location.';
+                if (err && err.code === 1) msg = 'Location access denied. Please allow location access in your browser and try again.';
+                if (err && err.code === 2) msg = 'Location unavailable. Please try again.';
+                if (err && err.code === 3) msg = 'Location request timed out. Please try again.';
+                text.textContent = msg;
+                btn.disabled = false;
+                btn.textContent = '📍 Try Again';
+            });
+        }
+
+        function setInputEnabled(enabled) { inputEl.disabled = !enabled; sendBtn.disabled = !enabled; }
+        function scrollDown() { chatbox.scrollTop = chatbox.scrollHeight; }
+        function esc(s) {
+            if (s === null || s === undefined) return '';
+            return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+        function post(url, body) {
+            return fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            }).then(function (res) {
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                return res.json();
+            });
+        }
+    })();
+    </script>
+</div>
+
+</body>
+</html>
